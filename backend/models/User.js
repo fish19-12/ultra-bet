@@ -1,11 +1,20 @@
-// backend/models/User.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
 const UserSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
+  username: { type: String, unique: true, sparse: true, trim: true },
+  firstName: { type: String, trim: true },
+  lastName: { type: String, trim: true },
+  phone: { type: String, unique: true, sparse: true, trim: true },
   password: { type: String, required: true },
-  role: { type: String, default: "admin" }, // role is always admin
+  role: { type: String, enum: ["player", "admin"], default: "player" },
+  referralCode: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
+  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  balance: { type: Number, default: 0 },
+  status: { type: String, enum: ["active", "disabled"], default: "active" },
+  lastLoginAt: { type: Date, default: null },
+}, {
+  timestamps: true,
 });
 
 // Pre-save hook to hash password (Mongoose 7 syntax)

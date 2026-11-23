@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useEffect } from "react";
 import {
   Gift,
   Gamepad2,
@@ -7,14 +8,14 @@ import {
   WalletCards,
   Trophy,
   Users,
-  MoreHorizontal,
   Flame,
   ChevronRight,
   Play,
   Clock3,
-  ShieldCheck,
   X,
 } from "lucide-react";
+import Auth from "./Auth";
+import Profile from "./Profile";
 
 const gameCards = [
   { title: "Aviator", label: "Hot", color: "from-[#d90025] via-[#3a0715] to-[#09090d]", mark: "✈" },
@@ -67,6 +68,37 @@ export default function UltraBet() {
   const [query, setQuery] = useState("");
   const [selectedGame, setSelectedGame] = useState(null);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [authMode, setAuthMode] = useState(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("ultraBetUser");
+    const token = localStorage.getItem("ultraBetToken");
+    if (storedUser && token) {
+      try {
+        setUser(JSON.parse(storedUser));
+        setLoggedIn(true);
+      } catch {
+        localStorage.removeItem("ultraBetUser");
+        localStorage.removeItem("ultraBetToken");
+      }
+    }
+  }, []);
+
+  const onAuthSuccess = (authenticatedUser) => {
+    setUser(authenticatedUser);
+    setLoggedIn(true);
+    setAuthMode(null);
+  };
+
+  const onLogout = () => {
+    localStorage.removeItem("ultraBetToken");
+    localStorage.removeItem("ultraBetUser");
+    setUser(null);
+    setLoggedIn(false);
+    setProfileOpen(false);
+  };
 
   const filteredGames = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -84,24 +116,24 @@ export default function UltraBet() {
           </button>
           <div className="flex items-center gap-2">
             {loggedIn ? (
-              <button type="button" className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.07] px-4 py-2.5 text-sm font-bold sm:flex">
+              <button type="button" onClick={() => setProfileOpen(true)} className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.07] px-4 py-2.5 text-sm font-bold sm:flex">
                 <WalletCards size={17} className="text-[#f4bd38]" />
                 0.00 ETB
               </button>
             ) : null}
             <button
               type="button"
-              onClick={() => setLoggedIn(false)}
+              onClick={() => loggedIn ? setProfileOpen(true) : setAuthMode("login")}
               className="hidden h-11 rounded-xl border border-white/10 bg-white/[0.07] px-5 text-sm font-bold transition hover:bg-white/[0.12] sm:block"
             >
-              Log in
+              {loggedIn ? user?.firstName || "Profile" : "Log in"}
             </button>
             <button
               type="button"
-              onClick={() => setLoggedIn(true)}
+              onClick={() => loggedIn ? setProfileOpen(true) : setAuthMode("signup")}
               className="h-11 rounded-xl bg-[#f4bd38] px-4 text-sm font-black text-[#17191f] shadow-[0_8px_24px_rgba(244,189,56,.18)] transition hover:bg-[#ffd45d] sm:px-6"
             >
-              Sign up
+              {loggedIn ? "Profile" : "Sign up"}
             </button>
           </div>
         </div>
@@ -217,12 +249,30 @@ export default function UltraBet() {
             </div>
             <h2 className="mt-5 text-2xl font-black">{selectedGame.title}</h2>
             <p className="mt-2 text-sm text-white/50">Demo lobby · Sign in to play and use real-time features.</p>
-            <button type="button" onClick={() => setLoggedIn(true)} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#f4bd38] font-black text-[#17191f]">
+            <button type="button" onClick={() => loggedIn ? setSelectedGame(null) : setAuthMode("login")} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#f4bd38] font-black text-[#17191f]">
               <Play size={18} fill="currentColor" />
               Play now
             </button>
           </div>
         </div>
+      ) : null}
+
+      {authMode ? (
+        <Auth
+          mode={authMode}
+          onClose={() => setAuthMode(null)}
+          onSuccess={onAuthSuccess}
+          onSwitch={() => setAuthMode(authMode === "signup" ? "login" : "signup")}
+        />
+      ) : null}
+
+      {profileOpen && user ? (
+        <Profile
+          user={user}
+          onClose={() => setProfileOpen(false)}
+          onUserChange={(updatedUser) => setUser(updatedUser)}
+          onLogout={onLogout}
+        />
       ) : null}
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.07] bg-[#151827]/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
@@ -234,7 +284,12 @@ export default function UltraBet() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setBottomTab(tab.id)}
+                onClick={() => {
+                  setBottomTab(tab.id);
+                  if (tab.id === "wallet" || tab.id === "promos") {
+                    loggedIn ? setProfileOpen(true) : setAuthMode("signup");
+                  }
+                }}
                 className={`flex min-h-[58px] flex-col items-center justify-center gap-1 text-[11px] font-semibold transition ${active ? "text-[#f4bd38]" : "text-white/55"}`}
               >
                 <span className={`flex h-8 w-8 items-center justify-center rounded-full ${active ? "bg-[#f4bd38]/10" : ""}`}>
