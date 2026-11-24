@@ -7,25 +7,72 @@ import {
   WalletCards,
   Trophy,
   Flame,
-  ChevronRight,
   Play,
   X,
   UserRound,
-  Headset,
 } from "lucide-react";
 import Auth from "./Auth";
 import Profile from "./Profile";
 import Deposit from "./Deposit";
 import Withdraw from "./Withdraw";
 import { apiRequest } from "../api";
+import sportsBanner from "../assets/banner 1.png";
+import virtualGamesBanner from "../assets/banner.png";
+import jetGameArt from "../assets/games/jet.png";
+import crashGameArt from "../assets/games/crash.png";
+import diceGameArt from "../assets/games/dice.png";
+import slotsGameArt from "../assets/games/slots.png";
+import minesGameArt from "../assets/games/mines.png";
+import plinkoGameArt from "../assets/games/plinko.png";
 
 const gameCards = [
-  { title: "Aviator", label: "Hot", provider: "Spribe", color: "from-[#d90025] via-[#3a0715] to-[#09090d]", mark: "✈" },
+  { title: "Aviator", label: "Hot", provider: "Spribe", category: "crash", color: "from-[#d90025] via-[#3a0715] to-[#09090d]", mark: "✈" },
+  { title: "JetX", label: "Popular", provider: "Spribe", category: "crash", color: "from-[#4f37fa] via-[#171452] to-[#09090d]", mark: "🚀", image: jetGameArt },
+  { title: "Spaceman", label: "New", provider: "Pragmatic Play", color: "from-[#b80d45] via-[#4b091e] to-[#16071d]", mark: "👨‍🚀" },
+  { title: "Crash", label: "Hot", provider: "Spribe", category: "crash", color: "from-[#ef4c24] via-[#68160a] to-[#190a0b]", mark: "📈", image: crashGameArt },
+  { title: "Dice", label: "Popular", provider: "Pragmatic Play", color: "from-[#6854ff] via-[#252263] to-[#111126]", mark: "🎲", image: diceGameArt },
+  { title: "777 Slots", label: "Top", provider: "Pragmatic Play", color: "from-[#e2a612] via-[#71320a] to-[#220b0b]", mark: "🎰", image: slotsGameArt },
+  { title: "Mines", label: "New", provider: "Spribe", color: "from-[#07a5a1] via-[#07545b] to-[#0c1726]", mark: "💎", image: minesGameArt },
+  { title: "Plinko", label: "Popular", provider: "Evolution", color: "from-[#cb3e73] via-[#63224b] to-[#171126]", mark: "🐂", image: plinkoGameArt },
+  { title: "Rocket Rush", label: "Hot", provider: "Spribe", category: "crash", color: "from-[#f45d16] via-[#77220c] to-[#1d1011]", mark: "🚀" },
+  { title: "Space Flight", label: "Live", provider: "Pragmatic Play", category: "crash", color: "from-[#4a53ff] via-[#242254] to-[#111126]", mark: "🛸" },
+  { title: "Lucky Wheel", label: "Live", provider: "Evolution", color: "from-[#ed9340] via-[#7d3b22] to-[#1b1027]", mark: "🎡" },
+  { title: "Blackjack 21", label: "Popular", provider: "Evolution", color: "from-[#007d63] via-[#06463e] to-[#101322]", mark: "♠" },
+  { title: "Royal Roulette", label: "Top", provider: "Evolution", color: "from-[#be163a] via-[#5c112a] to-[#170c20]", mark: "🎯" },
+  { title: "Golden Spin", label: "New", provider: "Pragmatic Play", color: "from-[#e3ad19] via-[#845509] to-[#211407]", mark: "✨" },
+  { title: "Treasure Hunt", label: "Exclusive", provider: "Pragmatic Play", color: "from-[#00a88b] via-[#0b4f5e] to-[#111633]", mark: "🗝️" },
   { title: "777 Triple Sevens", label: "Popular", provider: "Pragmatic Play", color: "from-[#efb900] via-[#9b4c00] to-[#46160d]", mark: "777" },
   { title: "Royal Flash", label: "New", provider: "Evolution", color: "from-[#b80d45] via-[#4b091e] to-[#16071d]", mark: "♛" },
   { title: "Chicken Coin", label: "Live", provider: "Pragmatic Play", color: "from-[#f39a00] via-[#7c2308] to-[#23070a]", mark: "♣" },
   { title: "Spin & Win", label: "Top", provider: "Evolution", color: "from-[#00a88b] via-[#0b4f5e] to-[#111633]", mark: "◉" },
   { title: "Lucky Crown", label: "Exclusive", provider: "Spribe", color: "from-[#9d45ff] via-[#4d1d8c] to-[#12071f]", mark: "♚" },
+];
+
+const heroSlides = [
+  {
+    eyebrow: "ULTRA SPORTS",
+    title: "The game is on.",
+    description: "Explore football, basketball and more.",
+    action: "Browse sports",
+    image: sportsBanner,
+    destination: "sports",
+  },
+  {
+    eyebrow: "ULTRA GAMES",
+    title: "Pick your next game.",
+    description: "Discover a world of games in one place.",
+    action: "Explore games",
+    image: virtualGamesBanner,
+    destination: "games",
+  },
+  {
+    eyebrow: "ULTRA WALLET",
+    title: "Ready when you are.",
+    description: "Make a deposit to get started, from 50 ETB.",
+    action: "Make a deposit",
+    image: virtualGamesBanner,
+    destination: "deposit",
+  },
 ];
 
 const tabs = [
@@ -58,18 +105,77 @@ function GameCard({ game, onOpen }) {
       onClick={() => onOpen(game)}
       className="group min-w-0 text-left"
     >
-      <div className={`relative aspect-[1.18] overflow-hidden rounded-[18px] bg-gradient-to-br ${game.color} shadow-[0_12px_30px_rgba(0,0,0,.28)]`}>
+      <div className={`relative aspect-[1.12] overflow-hidden rounded-[18px] bg-gradient-to-br ${game.color} shadow-[0_12px_30px_rgba(0,0,0,.28)]`}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,rgba(255,255,255,.22),transparent_22%),linear-gradient(140deg,transparent,rgba(0,0,0,.5))]" />
+        {game.image ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#110c20]">
+            <img src={game.image} alt="" className="h-full max-w-full object-contain transition duration-300 group-hover:scale-105" />
+          </div>
+        ) : null}
         <div className="absolute left-3 top-3 rounded-full border border-white/15 bg-black/35 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur">
           {game.label}
         </div>
-        <span className="absolute inset-0 flex items-center justify-center text-[44px] font-black italic tracking-[-8px] text-white drop-shadow-[0_8px_12px_rgba(0,0,0,.65)] transition duration-300 group-hover:scale-110">
-          {game.mark}
-        </span>
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent" />
+        {!game.image ? (
+          <span className="absolute inset-0 flex items-center justify-center text-[48px] font-black text-white drop-shadow-[0_8px_12px_rgba(0,0,0,.65)] transition duration-300 group-hover:scale-110">
+            {game.mark}
+          </span>
+        ) : null}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
       </div>
       <div className="mt-2.5 truncate px-1 text-[14px] font-semibold text-white">{game.title}</div>
     </button>
+  );
+}
+
+function HeroCarousel({ onSports, onGames, onDeposit }) {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const slide = heroSlides[activeSlide];
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % heroSlides.length);
+    }, 5500);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const handleAction = slide.destination === "sports"
+    ? onSports
+    : slide.destination === "deposit" ? onDeposit : onGames;
+
+  return (
+    <section className="relative mb-4 h-[150px] overflow-hidden rounded-[20px] border border-white/[0.08] bg-[#17182c] shadow-[0_14px_38px_rgba(0,0,0,.24)] sm:h-[174px]" aria-roledescription="carousel" aria-label="Featured Ultra Bet content">
+      {heroSlides.map((item, index) => (
+        <img
+          key={item.eyebrow}
+          src={item.image}
+          alt=""
+          aria-hidden="true"
+          className={`absolute inset-y-0 right-0 h-full w-[72%] object-cover object-[72%_38%] transition-opacity duration-700 sm:w-[65%] ${index === activeSlide ? "opacity-100" : "opacity-0"}`}
+        />
+      ))}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#111326] via-[#111326]/90 via-45% to-transparent" />
+      <div className="absolute inset-y-0 left-0 flex w-[78%] flex-col justify-center px-4 py-3 sm:w-[62%] sm:px-7">
+        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#c181ff] sm:text-[10px]">{slide.eyebrow}</span>
+        <h2 className="mt-1 text-[19px] font-black leading-tight sm:text-[25px]">{slide.title}</h2>
+        <p className="mt-1 max-w-[290px] text-[10px] leading-4 text-white/65 sm:text-xs">{slide.description}</p>
+        <button type="button" onClick={handleAction} className="mt-2.5 flex h-8 w-fit items-center gap-1.5 rounded-lg bg-[#f4bd38] px-3 text-[10px] font-black text-[#17191f] shadow-[0_5px_18px_rgba(244,189,56,.18)] transition hover:bg-[#ffd45d] sm:h-9 sm:px-4 sm:text-xs">
+          {slide.action}
+          <Play size={12} fill="currentColor" />
+        </button>
+      </div>
+      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 sm:bottom-4 sm:right-5">
+        {heroSlides.map((item, index) => (
+          <button
+            key={item.eyebrow}
+            type="button"
+            onClick={() => setActiveSlide(index)}
+            aria-label={`Show ${item.eyebrow.toLowerCase()} banner`}
+            aria-current={index === activeSlide ? "true" : undefined}
+            className={`h-1.5 rounded-full transition-all ${index === activeSlide ? "w-5 bg-[#f4bd38]" : "w-1.5 bg-white/45 hover:bg-white/75"}`}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -258,7 +364,7 @@ export default function UltraBet() {
       const matchesProvider = provider === "All Providers" || game.provider === provider;
       const matchesTab = activeTab === "lobby"
         || (activeTab === "hot" && ["Hot", "Popular", "Top"].includes(game.label))
-        || (activeTab === "crash" && game.title === "Aviator");
+        || (activeTab === "crash" && game.category === "crash");
       return matchesSearch && matchesProvider && matchesTab;
     });
   }, [activeTab, provider, query]);
@@ -311,23 +417,11 @@ export default function UltraBet() {
         </section>
       ) : (
       <main className="mx-auto max-w-[1180px] px-3 pb-28 pt-3 md:px-6 md:pb-12 md:pt-5">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {[
-            ["Make a deposit", "From 50 ETB", "🎁", openDeposit],
-            ["Referral rewards", "Invite a friend", "🏆", () => loggedIn ? setProfileOpen(true) : setAuthMode("signup")],
-            ["Browse sports", "Demo markets", "⚡", () => setBottomTab("sports")],
-            ["Customer support", "Chat on Telegram", "🛡", openSupport],
-          ].map(([title, subtitle, icon, action]) => (
-            <button key={title} type="button" onClick={action} className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-white/[0.05] bg-[#191c31] px-3 text-left transition hover:border-[#f4bd38]/40 md:px-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#2e324b] to-[#171929] text-xl shadow-inner">{icon}</span>
-              <span className="min-w-0">
-                <span className="block truncate text-xs font-bold md:text-sm">{title}</span>
-                <span className="mt-1 block truncate text-[10px] text-white/45 md:text-xs">{subtitle}</span>
-              </span>
-              <ChevronRight className="ml-auto hidden text-white/25 sm:block" size={16} />
-            </button>
-          ))}
-        </div>
+        <HeroCarousel
+          onSports={() => setBottomTab("sports")}
+          onGames={() => setActiveTab("lobby")}
+          onDeposit={openDeposit}
+        />
 
         <nav className="mt-4 grid grid-cols-3 rounded-2xl bg-[#181b2d] p-1.5" aria-label="Game categories">
           {tabs.map((tab) => {
@@ -405,8 +499,12 @@ export default function UltraBet() {
             <button type="button" onClick={() => setSelectedGame(null)} className="absolute right-4 top-4 rounded-full border border-white/10 p-2 text-white/60" aria-label="Close">
               <X size={18} />
             </button>
-            <div className={`mt-2 flex aspect-[1.8] items-center justify-center rounded-2xl bg-gradient-to-br ${selectedGame.color}`}>
-              <span className="text-6xl font-black italic text-white drop-shadow-xl">{selectedGame.mark}</span>
+            <div className={`relative mt-2 flex aspect-[1.8] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${selectedGame.color}`}>
+              {selectedGame.image ? (
+                <img src={selectedGame.image} alt={`${selectedGame.title} game artwork`} className="absolute inset-0 h-full w-full object-contain" />
+              ) : (
+                <span className="text-6xl font-black text-white drop-shadow-xl">{selectedGame.mark}</span>
+              )}
             </div>
             <h2 className="mt-5 text-2xl font-black">{selectedGame.title}</h2>
             <p className="mt-2 text-sm text-white/50">Demo lobby · Sign in to play and use real-time features.</p>
@@ -444,12 +542,6 @@ export default function UltraBet() {
 
       {withdrawOpen && loggedIn ? (
         <Withdraw user={user} onClose={() => { setWithdrawOpen(false); setDepositOpen(true); }} onSupport={openSupport} onUserChange={setUser} />
-      ) : null}
-
-      {!profileOpen && !depositOpen && !withdrawOpen && !authMode ? (
-        <a href="https://t.me/+251921296982" target="_blank" rel="noreferrer" className="fixed bottom-[88px] right-4 z-40 flex h-12 items-center gap-2 rounded-full border border-[#37aee2]/20 bg-[#1b2435]/95 px-4 text-xs font-bold text-[#a3e4ff] shadow-xl backdrop-blur md:bottom-6 md:right-6">
-          <Headset size={17} /> Support
-        </a>
       ) : null}
 
       {!profileOpen && !depositOpen && !withdrawOpen && !authMode ? (
