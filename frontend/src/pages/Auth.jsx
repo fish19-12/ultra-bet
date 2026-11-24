@@ -44,7 +44,7 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
       setSuccess((current) => ({
         ...current,
         user: payload.user,
-        bonusPending: false,
+        phase: "bonus-accepted",
         title: "Welcome bonus accepted!",
         description: "Your 50 ETB play bonus is now in your bonus account.",
       }));
@@ -82,7 +82,7 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
         localStorage.setItem("ultraBetUser", JSON.stringify(auth.user));
         setSuccess({
           ...auth,
-          bonusPending: true,
+          phase: "registration",
           title: "Registration successful!",
           description: "Your phone number is verified and your Ultra Bet account is ready.",
         });
@@ -217,11 +217,12 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
     : (field) => (event) => setLogin((current) => ({ ...current, [field]: event.target.value }));
 
   if (success) {
+    const showBonusOffer = success.phase === "bonus-offer";
     return (
       <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#090a12]/80 backdrop-blur-md sm:items-center sm:p-5">
         <div className="w-full rounded-t-[28px] border border-white/[0.08] bg-[#171a2b] px-6 pb-8 pt-8 text-center shadow-[0_-20px_70px_rgba(0,0,0,.42)] sm:max-w-[430px] sm:rounded-[28px] sm:px-9 sm:py-10">
           <img src="/logo.png" alt="Ultra Bet" className="mx-auto h-14 max-w-[180px] object-contain" />
-          {success.bonusPending ? (
+          {showBonusOffer ? (
             <div className="mx-auto mt-7 flex h-[76px] w-[76px] items-center justify-center rounded-full bg-[#f4bd38]/10 text-[#f4bd38] ring-1 ring-[#f4bd38]/20">
               <Gift size={36} />
             </div>
@@ -232,7 +233,7 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
           )}
           <h1 className="mt-6 text-2xl font-black">{success.title}</h1>
           <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-white/50">{success.description}</p>
-          {success.bonusPending ? (
+          {showBonusOffer ? (
             <>
               <div className="mt-5 rounded-2xl border border-[#f4bd38]/20 bg-gradient-to-br from-[#392d47] to-[#242037] p-4 text-left">
                 <p className="text-xs font-bold uppercase tracking-[.15em] text-[#f4bd38]">A welcome gift for you</p>
@@ -252,6 +253,19 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
                 Continue without the bonus
               </button>
             </>
+          ) : success.phase === "registration" ? (
+            <button
+              type="button"
+              onClick={() => setSuccess((current) => ({
+                ...current,
+                phase: "bonus-offer",
+                title: "A welcome gift for you",
+                description: "Your registration is complete. Accept your one-time bonus below if you would like to claim it.",
+              }))}
+              className="mt-7 h-[52px] w-full rounded-xl bg-[#f4bd38] font-black text-[#17191f] shadow-[0_10px_24px_rgba(244,189,56,.16)]"
+            >
+              Continue
+            </button>
           ) : (
             <button
               type="button"
@@ -336,7 +350,7 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
                   onClick={() => {
                     localStorage.setItem("ultraBetToken", pendingSignup.auth.token);
                     localStorage.setItem("ultraBetUser", JSON.stringify(pendingSignup.auth.user));
-                    setSuccess({ ...pendingSignup.auth, bonusPending: true, title: "Registration successful!", description: "Your Ultra Bet account is ready. You can verify your phone later from your account." });
+                    setSuccess({ ...pendingSignup.auth, phase: "registration", title: "Registration successful!", description: "Your Ultra Bet account is ready. You can verify your phone later from your account." });
                   }}
                   className="font-bold text-white/60 hover:text-white"
                 >

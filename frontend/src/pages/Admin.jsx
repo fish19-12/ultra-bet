@@ -334,7 +334,7 @@ function AdminDashboard({ admin, token, onLogout }) {
   return (
     <div className="min-h-screen bg-[#0b0907] text-white">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
-        <aside className="sticky top-0 hidden h-screen w-[250px] shrink-0 flex-col border-r border-[#806038]/15 bg-[#100d09] p-5 md:flex lg:w-[286px] lg:p-6">
+        <aside className="sticky top-0 hidden h-screen min-h-0 w-[250px] shrink-0 flex-col overflow-y-auto border-r border-[#806038]/15 bg-[#100d09] p-5 md:flex lg:w-[286px] lg:p-6">
           <div className="rounded-[22px] border border-[#8a683b]/20 bg-gradient-to-br from-[#292116] to-[#17120d] p-4">
             <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-lg">
               <img src="/logo.png" alt="Ultra Bet" className="h-full w-full object-contain" />
@@ -360,10 +360,12 @@ function AdminDashboard({ admin, token, onLogout }) {
               );
             })}
           </nav>
-          <div className="mt-auto rounded-2xl border border-[#806038]/15 bg-[#1a1510] p-3">
-            <p className="truncate text-sm font-bold">{admin.username}</p>
-            <p className="mt-1 truncate text-xs text-white/40">{admin.email || "Admin account"}</p>
-            <button type="button" onClick={onLogout} className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#a74d12] to-[#c52720] text-xs font-black text-white shadow-lg hover:brightness-110"><LogOut size={15} /> Sign out</button>
+          <div className="sticky bottom-0 z-10 mt-auto shrink-0 border-t border-[#806038]/15 bg-[#100d09] pt-3">
+            <button type="button" onClick={onLogout} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#a74d12] to-[#c52720] text-sm font-black text-white shadow-lg hover:brightness-110"><LogOut size={16} /> Sign out</button>
+            <div className="mt-3 min-w-0 px-1 pb-1">
+              <p className="truncate text-sm font-bold">{admin.username}</p>
+              <p className="mt-1 truncate text-xs text-white/40">{admin.email || "Admin account"}</p>
+            </div>
           </div>
         </aside>
 
@@ -416,7 +418,7 @@ function AdminDashboard({ admin, token, onLogout }) {
             {mobileNavOpen ? (
               <div className="fixed inset-0 z-[70] flex md:hidden" role="dialog" aria-modal="true" aria-label="Admin navigation">
                 <button type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close admin sidebar" className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-                <aside className="relative flex h-full w-[min(84vw,310px)] flex-col border-r border-[#806038]/20 bg-[#100d09] p-5 shadow-2xl">
+                <aside className="relative flex h-full min-h-0 w-[min(84vw,310px)] flex-col overflow-y-auto border-r border-[#806038]/20 bg-[#100d09] p-5 shadow-2xl">
                   <div className="flex h-12 items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white p-1"><img src="/logo.png" alt="" className="h-full w-full object-contain" /></div>
@@ -445,10 +447,12 @@ function AdminDashboard({ admin, token, onLogout }) {
                       );
                     })}
                   </nav>
-                  <div className="mt-auto rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3">
-                    <p className="truncate text-sm font-bold">{admin.username}</p>
-                    <p className="mt-1 truncate text-xs text-white/40">{admin.email || "Admin account"}</p>
-                    <button type="button" onClick={onLogout} className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#a74d12] to-[#c52720] text-xs font-black text-white shadow-lg hover:brightness-110"><LogOut size={15} /> Sign out</button>
+                  <div className="sticky bottom-0 z-10 mt-auto shrink-0 border-t border-[#806038]/15 bg-[#100d09] pt-3">
+                    <button type="button" onClick={onLogout} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#a74d12] to-[#c52720] text-sm font-black text-white shadow-lg hover:brightness-110"><LogOut size={16} /> Sign out</button>
+                    <div className="mt-3 min-w-0 px-1 pb-1">
+                      <p className="truncate text-sm font-bold">{admin.username}</p>
+                      <p className="mt-1 truncate text-xs text-white/40">{admin.email || "Admin account"}</p>
+                    </div>
                   </div>
                 </aside>
               </div>
