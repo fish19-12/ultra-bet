@@ -70,6 +70,7 @@ app.use(
 
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/deposits", require("./routes/depositRoutes"));
+app.use("/api/withdrawals", require("./routes/withdrawalRoutes"));
 
 /* BOOKINGS */
 

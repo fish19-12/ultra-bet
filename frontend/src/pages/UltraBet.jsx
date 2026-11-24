@@ -16,6 +16,7 @@ import {
 import Auth from "./Auth";
 import Profile from "./Profile";
 import Deposit from "./Deposit";
+import Withdraw from "./Withdraw";
 import { apiRequest } from "../api";
 
 const gameCards = [
@@ -183,6 +184,7 @@ export default function UltraBet() {
   const [authMode, setAuthMode] = useState(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [provider, setProvider] = useState("All Providers");
   const [providersOpen, setProvidersOpen] = useState(false);
   const [gamesCollapsed, setGamesCollapsed] = useState(false);
@@ -231,7 +233,18 @@ export default function UltraBet() {
       return;
     }
     setProfileOpen(false);
+    setWithdrawOpen(false);
     setDepositOpen(true);
+  };
+
+  const openWithdraw = () => {
+    if (!loggedIn) {
+      setAuthMode("login");
+      return;
+    }
+    setProfileOpen(false);
+    setDepositOpen(false);
+    setWithdrawOpen(true);
   };
 
   const openSupport = () => {
@@ -419,22 +432,27 @@ export default function UltraBet() {
           user={user}
           onClose={() => { setProfileOpen(false); setBottomTab("games"); }}
           onDeposit={openDeposit}
+          onWithdraw={openWithdraw}
           onUserChange={setUser}
           onLogout={onLogout}
         />
       ) : null}
 
       {depositOpen && loggedIn ? (
-        <Deposit user={user} onClose={() => { setDepositOpen(false); setBottomTab("games"); }} onSupport={openSupport} />
+        <Deposit user={user} onClose={() => { setDepositOpen(false); setBottomTab("games"); }} onSupport={openSupport} onWithdraw={openWithdraw} />
       ) : null}
 
-      {!profileOpen && !depositOpen && !authMode ? (
+      {withdrawOpen && loggedIn ? (
+        <Withdraw user={user} onClose={() => { setWithdrawOpen(false); setDepositOpen(true); }} onSupport={openSupport} onUserChange={setUser} />
+      ) : null}
+
+      {!profileOpen && !depositOpen && !withdrawOpen && !authMode ? (
         <a href="https://t.me/+251921296982" target="_blank" rel="noreferrer" className="fixed bottom-[88px] right-4 z-40 flex h-12 items-center gap-2 rounded-full border border-[#37aee2]/20 bg-[#1b2435]/95 px-4 text-xs font-bold text-[#a3e4ff] shadow-xl backdrop-blur md:bottom-6 md:right-6">
           <Headset size={17} /> Support
         </a>
       ) : null}
 
-      {!profileOpen && !depositOpen && !authMode ? (
+      {!profileOpen && !depositOpen && !withdrawOpen && !authMode ? (
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.07] bg-[#151827]/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
         <div className="relative grid grid-cols-5">
           {bottomTabs.map((tab) => {

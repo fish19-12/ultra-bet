@@ -26,7 +26,7 @@ const statusStyles = {
   rejected: "border-rose-300/20 bg-rose-300/10 text-rose-200",
 };
 
-export default function Deposit({ user, onClose, onSupport }) {
+export default function Deposit({ user, onClose, onSupport, onWithdraw }) {
   const [method, setMethod] = useState("telebirr");
   const [amount, setAmount] = useState("");
   const [payerPhone, setPayerPhone] = useState("");
@@ -131,7 +131,10 @@ export default function Deposit({ user, onClose, onSupport }) {
             <ArrowLeft size={19} /> <span className="hidden sm:inline">Back to Ultra Bet</span>
           </button>
           <h1 className="font-black">Add funds</h1>
-          <button type="button" onClick={onSupport} className="text-sm font-bold text-[#f4bd38]">Support</button>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={onWithdraw} className="text-xs font-bold text-white/65 hover:text-white">Withdraw</button>
+            <button type="button" onClick={onSupport} className="text-xs font-bold text-[#f4bd38]">Support</button>
+          </div>
         </div>
       </header>
 
@@ -141,7 +144,7 @@ export default function Deposit({ user, onClose, onSupport }) {
             <p className="text-xs font-bold uppercase tracking-[.16em] text-white/45">Available balance</p>
             <div className="mt-2 flex items-end justify-between gap-4">
               <p className="text-3xl font-black sm:text-4xl">{formattedBalance} <span className="text-lg text-white/50">ETB</span></p>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4bd38]/10 text-[#f4bd38]"><WalletIcon /></div>
+              <button type="button" onClick={onWithdraw} className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-bold text-white/70 hover:text-white">Withdraw</button>
             </div>
             <div className="mt-5 flex items-start gap-2 rounded-xl border border-emerald-300/10 bg-emerald-300/[0.06] p-3 text-xs leading-5 text-emerald-100/70">
               <ShieldCheck className="mt-0.5 shrink-0 text-emerald-300" size={16} />
@@ -279,14 +282,10 @@ export default function Deposit({ user, onClose, onSupport }) {
           <div className="mt-6 rounded-2xl border border-[#f4bd38]/10 bg-[#f4bd38]/[0.04] p-4">
             <p className="text-sm font-bold">Need help?</p>
             <p className="mt-1 text-xs leading-5 text-white/45">Contact support if you have a question about a payment or review.</p>
-            <button type="button" onClick={onSupport} className="mt-3 text-xs font-bold text-[#f4bd38]">Open Telegram support →</button>
+            <button type="button" onClick={onSupport} className="mt-3 text-xs font-bold text-[#f4bd38]">Telegram · 0921296982 →</button>
           </div>
         </aside>
       </main>
     </div>
   );
-}
-
-function WalletIcon() {
-  return <CreditCard size={23} />;
 }
