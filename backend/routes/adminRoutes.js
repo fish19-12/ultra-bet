@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const Deposit = require("../models/Deposit");
 const User = require("../models/User");
 const Withdrawal = require("../models/Withdrawal");
@@ -95,6 +96,88 @@ router.get("/users", async (req, res) => {
   } catch (error) {
     console.error("ADMIN_USERS_ERROR:", error);
     return res.status(500).json({ success: false, message: "Unable to load players" });
+  }
+});
+
+router.patch("/users/:id/status", async (req, res) => {
+  try {
+    const status = String(req.body.status || "");
+    if (!["active", "disabled"].includes(status)) {
+      return res.status(400).json({ success: false, message: "Choose active or disabled status" });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.id, role: "player" },
+      { $set: { status } },
+      { new: true, runValidators: true },
+    ).select("_id status");
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Player account not found" });
+    }
+    return res.status(200).json({ success: true, message: `Player account ${status === "disabled" ? "banned" : "unbanned"}`, user });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({ success: false, message: "Invalid player account" });
+    }
+    console.error("ADMIN_PLAYER_STATUS_ERROR:", error);
+    return res.status(500).json({ success: false, message: "Unable to update player status" });
+  }
+});
+
+router.delete("/users/:id", async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    let response;
+    await session.withTransaction(async () => {
+      const user = await User.findOne({ _id: req.params.id, role: "player" }).session(session);
+      if (!user) {
+        const error = new Error("Player account not found");
+        error.statusCode = 404;
+        throw error;
+      }
+      if (Number(user.balance || 0) !== 0 || Number(user.bonusBalance || 0) !== 0) {
+        const error = new Error("Players with a cash or bonus balance cannot be deleted. Ban the account instead.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const [pendingDeposits, pendingWithdrawals] = await Promise.all([
+        Deposit.exists({ user: user._id, status: "pending" }).session(session),
+        Withdrawal.exists({ user: user._id, status: "pending" }).session(session),
+      ]);
+      if (pendingDeposits || pendingWithdrawals) {
+        const error = new Error("Resolve all pending deposits and withdrawals before deleting this player.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await User.updateMany(
+        { referredBy: user._id },
+        { $set: { referredBy: null } },
+        { session },
+      );
+      const deletion = await User.deleteOne({ _id: user._id, role: "player" }, { session });
+      if (deletion.deletedCount !== 1) {
+        const error = new Error("Player account not found");
+        error.statusCode = 404;
+        throw error;
+      }
+      response = { success: true, message: "Player account deleted. Completed transaction records are retained." };
+    });
+
+    return res.status(200).json(response);
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+    if (error.name === "CastError") {
+      return res.status(400).json({ success: false, message: "Invalid player account" });
+    }
+    console.error("ADMIN_PLAYER_DELETE_ERROR:", error);
+    return res.status(500).json({ success: false, message: "Unable to delete player account" });
+  } finally {
+    await session.endSession();
   }
 });
 

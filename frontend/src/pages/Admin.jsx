@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  Ban,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -16,6 +17,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Trash2,
   UserRound,
   Users,
   WalletCards,
@@ -247,6 +249,8 @@ function AdminDashboard({ admin, token, onLogout }) {
   const [error, setError] = useState("");
   const [reviewTarget, setReviewTarget] = useState(null);
   const [reviewing, setReviewing] = useState(false);
+  const [playerActionTarget, setPlayerActionTarget] = useState(null);
+  const [playerActionBusy, setPlayerActionBusy] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const loadDashboard = useCallback(async () => {
@@ -311,6 +315,38 @@ function AdminDashboard({ admin, token, onLogout }) {
       setError(requestError.message);
     } finally {
       setReviewing(false);
+    }
+  };
+
+  const confirmPlayerAction = async () => {
+    if (!playerActionTarget) return;
+    setPlayerActionBusy(true);
+    setError("");
+    try {
+      const { user, action } = playerActionTarget;
+      if (action === "delete") {
+        await apiRequest(`/api/admin/users/${user._id}`, {
+          method: "DELETE",
+          authToken: token,
+        });
+      } else {
+        await apiRequest(`/api/admin/users/${user._id}/status`, {
+          method: "PATCH",
+          authToken: token,
+          body: JSON.stringify({ status: action === "ban" ? "disabled" : "active" }),
+        });
+      }
+
+      setPlayerActionTarget(null);
+      if (action === "delete" && users.length === 1 && page > 1) {
+        setPage((current) => Math.max(1, current - 1));
+      } else {
+        await loadDashboard();
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setPlayerActionBusy(false);
     }
   };
 
@@ -512,7 +548,7 @@ function AdminDashboard({ admin, token, onLogout }) {
                 <div className="mb-3 flex items-center justify-between text-xs text-white/45"><span>{totalUsers.toLocaleString()} player accounts</span><span>Player cash and bonus shown separately</span></div>
                 {loading && !users.length ? <EmptyState>Loading player accounts…</EmptyState> : users.length ? (
                   <>
-                    <DataTable headers={["Player", "Contact", "Cash balance", "Bonus balance", "Referral", "Joined"]}>
+                    <DataTable headers={["Player", "Contact", "Cash balance", "Bonus balance", "Referral", "Joined", "Status", "Actions"]}>
                       {users.map((user) => (
                         <tr key={user._id} className="border-b border-white/[0.05] last:border-0">
                           <td className="px-4 py-3"><p className="text-sm font-bold">{[user.firstName, user.lastName].filter(Boolean).join(" ") || "Player"}</p><p className="mt-1 text-[11px] text-white/35">@{user.username}</p></td>
@@ -521,6 +557,35 @@ function AdminDashboard({ admin, token, onLogout }) {
                           <td className="px-4 py-3 text-xs font-bold text-amber-200">{currency(user.bonusBalance)}</td>
                           <td className="px-4 py-3"><span className="block text-xs font-bold">{user.referralCount}</span><span className="mt-1 block text-[10px] text-white/35">{user.referralCode || "No code"}</span></td>
                           <td className="px-4 py-3 text-xs text-white/45">{new Date(user.createdAt).toLocaleDateString()}</td>
+                          <td className="px-4 py-3">
+                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${user.status === "disabled" ? "bg-red-400/10 text-red-200" : "bg-emerald-400/10 text-emerald-200"}`}>
+                              {user.status === "disabled" ? "Banned" : "Active"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                title={user.status === "disabled" ? "Unban player" : "Ban player"}
+                                aria-label={user.status === "disabled" ? `Unban ${user.firstName || "player"}` : `Ban ${user.firstName || "player"}`}
+                                onClick={() => setPlayerActionTarget({ user, action: user.status === "disabled" ? "unban" : "ban" })}
+                                className="flex h-9 items-center gap-1.5 rounded-lg border border-white/10 px-2.5 text-xs font-bold text-white/70 hover:border-amber-200/30 hover:text-amber-100"
+                              >
+                                {user.status === "disabled" ? <ShieldCheck size={14} /> : <Ban size={14} />}
+                                {user.status === "disabled" ? "Unban" : "Ban"}
+                              </button>
+                              <button
+                                type="button"
+                                title="Delete player"
+                                aria-label={`Delete ${user.firstName || "player"}`}
+                                onClick={() => setPlayerActionTarget({ user, action: "delete" })}
+                                className="flex h-9 items-center gap-1.5 rounded-lg border border-red-300/15 px-2.5 text-xs font-bold text-red-200 hover:border-red-300/35 hover:bg-red-300/[0.06]"
+                              >
+                                <Trash2 size={14} />
+                                Delete
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </DataTable>
@@ -580,6 +645,36 @@ function AdminDashboard({ admin, token, onLogout }) {
             <div className="mt-5 grid grid-cols-2 gap-2">
               <button type="button" disabled={reviewing} onClick={() => setReviewTarget(null)} className="h-11 rounded-xl border border-white/10 text-sm font-bold text-white/60">Cancel</button>
               <button type="button" disabled={reviewing} onClick={confirmReview} className="h-11 rounded-xl bg-[#f4bd38] text-sm font-black text-[#17191f] disabled:opacity-50">{reviewing ? "Saving…" : "Confirm"}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {playerActionTarget ? (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="player-action-title">
+          <div className="w-full max-w-md rounded-t-3xl border border-white/10 bg-[#181a2b] p-5 sm:rounded-3xl sm:p-6">
+            <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${playerActionTarget.action === "delete" ? "bg-red-300/10 text-red-200" : "bg-amber-300/10 text-amber-200"}`}>
+              {playerActionTarget.action === "delete" ? <Trash2 size={20} /> : playerActionTarget.action === "ban" ? <Ban size={20} /> : <ShieldCheck size={20} />}
+            </div>
+            <h2 id="player-action-title" className="mt-4 text-xl font-black">
+              {playerActionTarget.action === "delete" ? "Delete player account?" : playerActionTarget.action === "ban" ? "Ban player?" : "Unban player?"}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-white/50">
+              {playerActionTarget.action === "delete"
+                ? `Permanently delete ${[playerActionTarget.user.firstName, playerActionTarget.user.lastName].filter(Boolean).join(" ") || "this player"}? Accounts with a remaining cash/bonus balance or pending payments cannot be deleted. Completed transaction records will be retained.`
+                : playerActionTarget.action === "ban"
+                  ? `Disable ${[playerActionTarget.user.firstName, playerActionTarget.user.lastName].filter(Boolean).join(" ") || "this player's"} account? They will be blocked from login and further authenticated requests.`
+                  : `Restore access for ${[playerActionTarget.user.firstName, playerActionTarget.user.lastName].filter(Boolean).join(" ") || "this player"}?`}
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" disabled={playerActionBusy} onClick={() => setPlayerActionTarget(null)} className="h-11 rounded-xl border border-white/10 text-sm font-bold text-white/60 disabled:opacity-50">Cancel</button>
+              <button
+                type="button"
+                disabled={playerActionBusy}
+                onClick={confirmPlayerAction}
+                className={`h-11 rounded-xl text-sm font-black disabled:opacity-50 ${playerActionTarget.action === "delete" ? "bg-red-400 text-[#17191f]" : "bg-[#f4bd38] text-[#17191f]"}`}
+              >
+                {playerActionBusy ? "Working…" : playerActionTarget.action === "delete" ? "Delete account" : playerActionTarget.action === "ban" ? "Ban player" : "Unban player"}
+              </button>
             </div>
           </div>
         </div>
