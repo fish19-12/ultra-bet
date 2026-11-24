@@ -8,7 +8,7 @@ const initialSignup = {
   phone: "",
   password: "",
   confirmPassword: "",
-  referralCode: "",
+  referralCode: new URLSearchParams(window.location.search).get("ref") || "",
 };
 
 export default function Auth({ mode, onSuccess, onSwitch, onClose }) {

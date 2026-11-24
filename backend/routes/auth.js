@@ -4,7 +4,8 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-const JWT_SECRET = process.env.JWT_SECRET || "ultra-bet-development-secret";
+const JWT_SECRET = require("../config/jwt");
+const { requireAuth } = require("../middleware/auth");
 
 function createToken(user) {
   return jwt.sign(
@@ -147,22 +148,6 @@ router.post("/logout", (req, res) => {
   return res.status(200).json({ success: true, message: "Logged out successfully" });
 });
 
-function requireAuth(req, res, next) {
-  const header = req.headers.authorization || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!token) {
-    return res.status(401).json({ success: false, message: "Authentication required" });
-  }
-
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.auth = payload;
-    return next();
-  } catch {
-    return res.status(401).json({ success: false, message: "Session expired" });
-  }
-}
-
 router.get("/me", requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.auth.id);
@@ -183,8 +168,14 @@ router.patch("/profile", requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: "Account not found" });
     }
 
-    if (typeof req.body.firstName === "string") user.firstName = req.body.firstName.trim();
-    if (typeof req.body.lastName === "string") user.lastName = req.body.lastName.trim();
+    const firstName = String(req.body.firstName || "").trim();
+    const lastName = String(req.body.lastName || "").trim();
+    if (!firstName || !lastName) {
+      return res.status(400).json({ success: false, message: "First and last name are required" });
+    }
+
+    user.firstName = firstName;
+    user.lastName = lastName;
 
     await user.save();
     return res.status(200).json({
@@ -192,43 +183,52 @@ router.patch("/profile", requireAuth, async (req, res) => {
       message: "Profile updated",
       user: publicUser(user),
     });
-
-    router.patch("/password", requireAuth, async (req, res) => {
-      try {
-        const currentPassword = String(req.body.currentPassword || "");
-        const newPassword = String(req.body.newPassword || "");
-        const confirmPassword = String(req.body.confirmPassword || "");
-
-        if (!currentPassword || !newPassword || !confirmPassword) {
-          return res.status(400).json({ success: false, message: "Complete all password fields" });
-        }
-        if (newPassword.length < 6) {
-          return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
-        }
-        if (newPassword !== confirmPassword) {
-          return res.status(400).json({ success: false, message: "New passwords do not match" });
-        }
-
-        const user = await User.findById(req.auth.id);
-        if (!user) {
-          return res.status(404).json({ success: false, message: "Account not found" });
-        }
-        if (!(await user.comparePassword(currentPassword))) {
-          return res.status(400).json({ success: false, message: "Current password is incorrect" });
-        }
-
-        user.password = newPassword;
-        await user.save();
-
-        return res.status(200).json({ success: true, message: "Password changed successfully" });
-      } catch (error) {
-        console.error("PASSWORD_CHANGE_ERROR:", error);
-        return res.status(500).json({ success: false, message: "Unable to change password" });
-      }
-    });
   } catch (error) {
     console.error("PROFILE_UPDATE_ERROR:", error);
     return res.status(500).json({ success: false, message: "Unable to update profile" });
+  }
+});
+
+router.patch("/password", requireAuth, async (req, res) => {
+  try {
+    const currentPassword = String(req.body.currentPassword || "");
+    const newPassword = String(req.body.newPassword || "");
+    const confirmPassword = String(req.body.confirmPassword || "");
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: "Complete all password fields" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: "New passwords do not match" });
+    }
+
+    const user = await User.findById(req.auth.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Account not found" });
+    }
+    if (!(await user.comparePassword(currentPassword))) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect" });
+    }
+
+    user.password = newPassword;
+    await user.save();
+    return res.status(200).json({ success: true, message: "Password changed successfully" });
+  } catch (error) {
+    console.error("PASSWORD_CHANGE_ERROR:", error);
+    return res.status(500).json({ success: false, message: "Unable to change password" });
+  }
+});
+
+router.get("/referrals", requireAuth, async (req, res) => {
+  try {
+    const count = await User.countDocuments({ referredBy: req.auth.id });
+    return res.status(200).json({ success: true, referrals: count });
+  } catch (error) {
+    console.error("REFERRALS_ERROR:", error);
+    return res.status(500).json({ success: false, message: "Unable to load referrals" });
   }
 });
 
