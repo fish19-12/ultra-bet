@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Auth from "./Auth";
 import Profile from "./Profile";
+import { apiRequest } from "../api";
 
 const gameCards = [
   { title: "Aviator", label: "Hot", color: "from-[#d90025] via-[#3a0715] to-[#09090d]", mark: "✈" },
@@ -79,6 +80,19 @@ export default function UltraBet() {
       try {
         setUser(JSON.parse(storedUser));
         setLoggedIn(true);
+        apiRequest("/api/auth/me")
+          .then((payload) => {
+            localStorage.setItem("ultraBetUser", JSON.stringify(payload.user));
+            setUser(payload.user);
+          })
+          .catch((error) => {
+            if (error.status === 401) {
+              localStorage.removeItem("ultraBetUser");
+              localStorage.removeItem("ultraBetToken");
+              setUser(null);
+              setLoggedIn(false);
+            }
+          });
       } catch {
         localStorage.removeItem("ultraBetUser");
         localStorage.removeItem("ultraBetToken");
@@ -90,6 +104,7 @@ export default function UltraBet() {
     setUser(authenticatedUser);
     setLoggedIn(true);
     setAuthMode(null);
+    setProfileOpen(true);
   };
 
   const onLogout = () => {
@@ -118,7 +133,7 @@ export default function UltraBet() {
             {loggedIn ? (
               <button type="button" onClick={() => setProfileOpen(true)} className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.07] px-4 py-2.5 text-sm font-bold sm:flex">
                 <WalletCards size={17} className="text-[#f4bd38]" />
-                0.00 ETB
+                {Number(user?.balance || 0).toFixed(2)} ETB
               </button>
             ) : null}
             <button
@@ -270,7 +285,7 @@ export default function UltraBet() {
         <Profile
           user={user}
           onClose={() => setProfileOpen(false)}
-          onUserChange={(updatedUser) => setUser(updatedUser)}
+          onUserChange={setUser}
           onLogout={onLogout}
         />
       ) : null}

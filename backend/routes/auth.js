@@ -77,6 +77,8 @@ router.post("/signup", async (req, res) => {
     } while (await User.exists({ referralCode: ownReferralCode }));
 
     const user = await User.create({
+      // Older deployments have a unique username index that is not sparse.
+      username: phone,
       firstName,
       lastName,
       phone,
@@ -95,6 +97,13 @@ router.post("/signup", async (req, res) => {
     });
   } catch (error) {
     console.error("SIGNUP_ERROR:", error);
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      const message = field === "phone" || field === "username"
+        ? "This phone number is already registered"
+        : "Unable to create the account because a unique value is already in use";
+      return res.status(409).json({ success: false, message });
+    }
     return res.status(500).json({ success: false, message: "Unable to create account" });
   }
 });
@@ -182,6 +191,40 @@ router.patch("/profile", requireAuth, async (req, res) => {
       success: true,
       message: "Profile updated",
       user: publicUser(user),
+    });
+
+    router.patch("/password", requireAuth, async (req, res) => {
+      try {
+        const currentPassword = String(req.body.currentPassword || "");
+        const newPassword = String(req.body.newPassword || "");
+        const confirmPassword = String(req.body.confirmPassword || "");
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+          return res.status(400).json({ success: false, message: "Complete all password fields" });
+        }
+        if (newPassword.length < 6) {
+          return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
+        }
+        if (newPassword !== confirmPassword) {
+          return res.status(400).json({ success: false, message: "New passwords do not match" });
+        }
+
+        const user = await User.findById(req.auth.id);
+        if (!user) {
+          return res.status(404).json({ success: false, message: "Account not found" });
+        }
+        if (!(await user.comparePassword(currentPassword))) {
+          return res.status(400).json({ success: false, message: "Current password is incorrect" });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        return res.status(200).json({ success: true, message: "Password changed successfully" });
+      } catch (error) {
+        console.error("PASSWORD_CHANGE_ERROR:", error);
+        return res.status(500).json({ success: false, message: "Unable to change password" });
+      }
     });
   } catch (error) {
     console.error("PROFILE_UPDATE_ERROR:", error);
