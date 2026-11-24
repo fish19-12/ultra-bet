@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  BadgeCheck,
-  Banknote,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -14,12 +12,14 @@ import {
   LockKeyhole,
   LogOut,
   Mail,
+  Menu,
   RefreshCw,
   Search,
   ShieldCheck,
   UserRound,
   Users,
   WalletCards,
+  X,
 } from "lucide-react";
 import { apiRequest } from "../api";
 
@@ -86,17 +86,17 @@ function AdminAuth({ onAuthenticated }) {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0c0e1a] px-4 py-10 text-white">
-      <div className="pointer-events-none absolute -left-24 -top-20 h-80 w-80 rounded-full bg-violet-600/15 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-28 -right-20 h-96 w-96 rounded-full bg-amber-400/10 blur-3xl" />
-      <section className="relative w-full max-w-[460px] rounded-[28px] border border-white/[0.08] bg-[#171a2a]/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,.45)] sm:p-9">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0b0907] px-4 py-10 text-white">
+      <div className="pointer-events-none absolute -left-24 -top-20 h-80 w-80 rounded-full bg-amber-700/15 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-28 -right-20 h-96 w-96 rounded-full bg-orange-700/10 blur-3xl" />
+      <section className="relative w-full max-w-[460px] rounded-[28px] border border-[#7c5b2b]/25 bg-[#17130f]/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,.55)] sm:p-9">
         <div className="flex items-center justify-center">
           <img src="/logo.png" alt="Ultra Bet" className="h-14 max-w-[190px] object-contain" />
         </div>
-        <div className="mx-auto mt-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#f4bd38]/15 bg-[#f4bd38]/10 text-[#f4bd38]">
+        <div className="mx-auto mt-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#c9973b]/20 bg-[#c9973b]/10 text-[#e2b55b]">
           <ShieldCheck size={23} />
         </div>
-        <p className="mt-4 text-center text-[10px] font-black uppercase tracking-[.22em] text-[#c18cff]">Secure control center</p>
+        <p className="mt-4 text-center text-[10px] font-black uppercase tracking-[.22em] text-[#d3a454]">Secure control center</p>
         <h1 className="mt-2 text-center text-2xl font-black sm:text-3xl">{isRegister ? "Create admin account" : "Admin sign in"}</h1>
         <p className="mx-auto mt-2 max-w-sm text-center text-sm leading-6 text-white/45">
           {isRegister
@@ -107,28 +107,28 @@ function AdminAuth({ onAuthenticated }) {
         <form onSubmit={submit} className="mt-7 space-y-3">
           {isRegister ? (
             <>
-              <label className="auth-field">
+              <label className="admin-auth-field">
                 <UserRound size={18} />
                 <input required minLength={3} maxLength={30} autoComplete="username" value={form.username} onChange={update("username")} placeholder="Admin username" />
               </label>
-              <label className="auth-field">
+              <label className="admin-auth-field">
                 <Mail size={18} />
                 <input required type="email" autoComplete="email" value={form.email} onChange={update("email")} placeholder="Admin email" />
               </label>
             </>
           ) : (
-            <label className="auth-field">
+            <label className="admin-auth-field">
               <UserRound size={18} />
               <input required autoComplete="username" value={form.identity} onChange={update("identity")} placeholder="Username or email" />
             </label>
           )}
-          <label className="auth-field">
+          <label className="admin-auth-field">
             <LockKeyhole size={18} />
             <input required minLength={isRegister ? 8 : undefined} type="password" autoComplete={isRegister ? "new-password" : "current-password"} value={form.password} onChange={update("password")} placeholder="Password" />
           </label>
           {isRegister ? (
             <>
-              <label className="auth-field">
+              <label className="admin-auth-field">
                 <ShieldCheck size={18} />
                 <input required type="password" autoComplete="off" value={form.adminKey} onChange={update("adminKey")} placeholder="Admin secret code" />
               </label>
@@ -136,7 +136,7 @@ function AdminAuth({ onAuthenticated }) {
             </>
           ) : null}
           {error ? <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/[0.08] px-4 py-3 text-sm text-rose-100">{error}</p> : null}
-          <button type="submit" disabled={loading} className="mt-2 flex h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[#f4bd38] font-black text-[#17191f] shadow-[0_10px_26px_rgba(244,189,56,.14)] transition hover:bg-[#ffd45d] disabled:opacity-60">
+          <button type="submit" disabled={loading} className="mt-2 flex h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#c98d2f] to-[#f4bd38] font-black text-[#17130d] shadow-[0_10px_26px_rgba(201,141,47,.18)] transition hover:brightness-110 disabled:opacity-60">
             {loading ? "Please wait..." : isRegister ? "Create admin account" : "Sign in to admin"}
             {!loading ? <ChevronRight size={18} /> : null}
           </button>
@@ -144,7 +144,7 @@ function AdminAuth({ onAuthenticated }) {
 
         <div className="mt-6 border-t border-white/[0.07] pt-5 text-center text-sm text-white/50">
           {isRegister ? "Already have an admin account?" : "Need to set up an admin account?"}
-          <button type="button" onClick={() => { setMode(isRegister ? "login" : "register"); setError(""); }} className="ml-2 font-bold text-[#f4bd38]">
+          <button type="button" onClick={() => { setMode(isRegister ? "login" : "register"); setError(""); }} className="ml-2 font-bold text-[#e2b55b]">
             {isRegister ? "Sign in" : "Create admin"}
           </button>
         </div>
@@ -247,6 +247,7 @@ function AdminDashboard({ admin, token, onLogout }) {
   const [error, setError] = useState("");
   const [reviewTarget, setReviewTarget] = useState(null);
   const [reviewing, setReviewing] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -331,20 +332,27 @@ function AdminDashboard({ admin, token, onLogout }) {
   const heading = navigation.find((item) => item.id === section)?.label || "Overview";
 
   return (
-    <div className="min-h-screen bg-[#0d0f1b] text-white">
-      <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col lg:flex-row">
-        <aside className="hidden w-[250px] shrink-0 flex-col border-r border-white/[0.06] bg-[#111321] p-5 lg:flex">
-          <div className="flex h-12 items-center px-2">
-            <img src="/logo.png" alt="Ultra Bet" className="h-10 max-w-[150px] object-contain" />
+    <div className="min-h-screen bg-[#0b0907] text-white">
+      <div className="mx-auto flex min-h-screen max-w-[1600px]">
+        <aside className="sticky top-0 hidden h-screen w-[250px] shrink-0 flex-col border-r border-[#806038]/15 bg-[#100d09] p-5 md:flex lg:w-[286px] lg:p-6">
+          <div className="rounded-[22px] border border-[#8a683b]/20 bg-gradient-to-br from-[#292116] to-[#17120d] p-4">
+            <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-lg">
+              <img src="/logo.png" alt="Ultra Bet" className="h-full w-full object-contain" />
+            </div>
+            <p className="mt-4 text-base font-black">Ultra Bet</p>
+            <p className="mt-0.5 text-sm text-white/45">Admin Panel</p>
           </div>
-          <p className="mb-3 mt-9 px-3 text-[10px] font-black uppercase tracking-[.2em] text-white/30">Management</p>
+          <div className="mt-4 flex items-center gap-2 rounded-full border border-emerald-400/10 bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-white/65">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,.65)]" /> Operations online
+          </div>
+          <p className="mb-3 mt-8 px-3 text-[10px] font-black uppercase tracking-[.2em] text-[#9a825f]">Management</p>
           <nav className="space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon;
               const active = section === item.id;
               const pending = item.id === "deposits" ? deposits.length : item.id === "withdrawals" ? withdrawals.length : 0;
               return (
-                <button key={item.id} type="button" onClick={() => setSection(item.id)} className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold transition ${active ? "bg-[#f4bd38]/10 text-[#f4bd38]" : "text-white/50 hover:bg-white/[0.04] hover:text-white"}`}>
+                <button key={item.id} type="button" onClick={() => setSection(item.id)} className={`flex h-11 w-full items-center gap-3 rounded-xl border-l-2 px-3 text-left text-sm font-bold transition ${active ? "border-[#f4bd38] bg-gradient-to-r from-[#f4bd38]/10 to-transparent text-[#f4bd38]" : "border-transparent text-white/50 hover:bg-white/[0.04] hover:text-white"}`}>
                   <Icon size={18} />
                   <span className="flex-1">{item.label}</span>
                   {pending > 0 ? <span className="rounded-full bg-rose-400/15 px-2 py-0.5 text-[10px] text-rose-200">{pending}</span> : null}
@@ -352,51 +360,99 @@ function AdminDashboard({ admin, token, onLogout }) {
               );
             })}
           </nav>
-          <div className="mt-auto rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3">
+          <div className="mt-auto rounded-2xl border border-[#806038]/15 bg-[#1a1510] p-3">
             <p className="truncate text-sm font-bold">{admin.username}</p>
             <p className="mt-1 truncate text-xs text-white/40">{admin.email || "Admin account"}</p>
-            <button type="button" onClick={onLogout} className="mt-3 flex items-center gap-2 text-xs font-bold text-white/45 hover:text-white"><LogOut size={15} /> Sign out</button>
+            <button type="button" onClick={onLogout} className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#a74d12] to-[#c52720] text-xs font-black text-white shadow-lg hover:brightness-110"><LogOut size={15} /> Sign out</button>
           </div>
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0d0f1b]/95 backdrop-blur-xl">
-            <div className="flex h-[66px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+          <header className="sticky top-0 z-30 border-b border-[#806038]/15 bg-[#0b0907]/95 backdrop-blur-xl">
+            <div className="flex h-[78px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
               <div className="flex min-w-0 items-center gap-3">
-                <img src="/logo.png" alt="Ultra Bet" className="h-8 max-w-[110px] object-contain lg:hidden" />
-                <div className="hidden h-9 w-9 items-center justify-center rounded-xl border border-[#f4bd38]/15 bg-[#f4bd38]/10 text-[#f4bd38] sm:flex lg:hidden"><ShieldCheck size={18} /></div>
+                <button type="button" onClick={() => setMobileNavOpen(true)} aria-label="Open admin sidebar" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#806038]/20 bg-[#1a1510] text-[#e2b55b] hover:text-white md:hidden"><Menu size={19} /></button>
+                <img src="/logo.png" alt="Ultra Bet" className="h-8 max-w-[110px] object-contain md:hidden" />
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#c18cff]">Ultra Bet admin</p>
-                  <h1 className="truncate text-sm font-black sm:text-base">{heading}</h1>
+                  <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a17a43]">Operations hub</p>
+                  <h1 className="truncate text-base font-black sm:text-lg">{heading}</h1>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="hidden text-right sm:block"><span className="block text-xs font-bold">{admin.username}</span><span className="block text-[10px] text-white/40">Administrator</span></span>
-                <button type="button" onClick={loadDashboard} disabled={loading} aria-label="Refresh dashboard" className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/55 hover:text-white disabled:opacity-40"><RefreshCw size={17} className={loading ? "animate-spin" : ""} /></button>
-                <button type="button" onClick={onLogout} aria-label="Sign out" className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/55 hover:text-rose-200 lg:hidden"><LogOut size={17} /></button>
+                <span className="hidden rounded-full border border-[#806038]/15 bg-[#211b12] px-3 py-2 text-xs font-bold text-[#e2b55b] sm:block">{new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</span>
+                <span className="hidden items-center gap-2 rounded-full border border-emerald-500/10 bg-emerald-500/[0.08] px-3 py-2 text-xs font-bold text-emerald-300 lg:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> System stable</span>
+                <span className="hidden items-center gap-2 rounded-xl border border-[#806038]/15 bg-[#17130e] py-1.5 pl-2 pr-3 lg:flex">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#c9973b]/15 text-xs font-black text-[#e2b55b]">{admin.username.charAt(0).toUpperCase()}</span>
+                  <span className="max-w-24 truncate text-xs font-bold text-white/75">{admin.username}</span>
+                </span>
+                <button type="button" onClick={loadDashboard} disabled={loading} aria-label="Refresh dashboard" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#806038]/15 bg-[#17130e] text-white/55 hover:text-[#e2b55b] disabled:opacity-40"><RefreshCw size={17} className={loading ? "animate-spin" : ""} /></button>
+                <button type="button" onClick={onLogout} aria-label="Sign out" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#806038]/15 bg-[#17130e] text-white/55 hover:text-rose-200 md:hidden"><LogOut size={17} /></button>
               </div>
             </div>
-            <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:hidden">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button key={item.id} type="button" onClick={() => setSection(item.id)} className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold ${section === item.id ? "bg-[#f4bd38] text-[#17191f]" : "bg-white/[0.04] text-white/55"}`}>
-                    <Icon size={15} />{item.label}
-                  </button>
-                );
-              })}
-            </nav>
           </header>
 
-          <main className="px-4 py-5 pb-12 sm:px-6 sm:py-7 lg:px-8">
-            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[.16em] text-[#c18cff]">Control center</p>
-                <h2 className="mt-1 text-2xl font-black sm:text-3xl">{section === "overview" ? "Welcome back" : heading}</h2>
-                <p className="mt-1 text-sm text-white/40">{section === "overview" ? "Monitor player activity and review wallet requests." : `Manage ${heading.toLowerCase()} for Ultra Bet.`}</p>
+          <main className="px-4 py-5 pb-12 sm:px-6 sm:py-7 lg:px-9">
+            {section === "overview" ? (
+              <section className="relative mb-5 overflow-hidden rounded-[26px] border border-[#8a683b]/25 bg-gradient-to-br from-[#241b10] via-[#17120d] to-[#10110f] p-5 sm:p-8">
+                <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full border border-[#c9973b]/10 bg-[#c9973b]/[0.025]" />
+                <div className="pointer-events-none absolute -right-8 -top-12 h-48 w-48 rounded-full border border-[#c9973b]/10" />
+                <div className="relative max-w-[680px]">
+                  <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.2em] text-[#e2b55b]"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Operations dashboard</p>
+                  <h2 className="mt-4 text-[28px] font-black leading-tight tracking-tight sm:text-4xl">Welcome back, {admin.username}.</h2>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-white/55 sm:text-base">Your player activity, wallet reviews, and referral performance — all in one place.</p>
+                </div>
+                <div className="absolute bottom-5 right-6 hidden h-20 w-20 items-center justify-center rounded-full border border-[#c9973b]/15 bg-[#c9973b]/[0.06] text-[#d3a454] sm:flex">
+                  <ShieldCheck size={34} strokeWidth={1.4} />
+                </div>
+              </section>
+            ) : (
+              <div className="mb-5">
+                <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#a17a43]">Operations hub</p>
+                <h2 className="mt-1 text-2xl font-black sm:text-3xl">{heading}</h2>
+                <p className="mt-1 text-sm text-white/45">Manage {heading.toLowerCase()} for Ultra Bet.</p>
               </div>
-              {section === "overview" ? <span className="flex items-center gap-2 rounded-full border border-emerald-300/15 bg-emerald-300/[0.06] px-3 py-1.5 text-[10px] font-bold text-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Admin session active</span> : null}
-            </div>
+            )}
+
+            {mobileNavOpen ? (
+              <div className="fixed inset-0 z-[70] flex md:hidden" role="dialog" aria-modal="true" aria-label="Admin navigation">
+                <button type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close admin sidebar" className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+                <aside className="relative flex h-full w-[min(84vw,310px)] flex-col border-r border-[#806038]/20 bg-[#100d09] p-5 shadow-2xl">
+                  <div className="flex h-12 items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white p-1"><img src="/logo.png" alt="" className="h-full w-full object-contain" /></div>
+                      <span className="text-sm font-black">Ultra Bet Admin</span>
+                    </div>
+                    <button type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close admin sidebar" className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#806038]/20 text-white/55"><X size={18} /></button>
+                  </div>
+                  <div className="mt-4 flex items-center gap-2 rounded-full border border-emerald-400/10 bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-white/65"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Operations online</div>
+                  <p className="mb-3 mt-8 px-3 text-[10px] font-black uppercase tracking-[.2em] text-[#9a825f]">Management</p>
+                  <nav className="space-y-1">
+                    {navigation.map((item) => {
+                      const Icon = item.icon;
+                      const active = section === item.id;
+                      const pending = item.id === "deposits" ? deposits.length : item.id === "withdrawals" ? withdrawals.length : 0;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => { setSection(item.id); setMobileNavOpen(false); }}
+                          className={`flex h-12 w-full items-center gap-3 rounded-xl border-l-2 px-3 text-left text-sm font-bold transition ${active ? "border-[#f4bd38] bg-gradient-to-r from-[#f4bd38]/10 to-transparent text-[#f4bd38]" : "border-transparent text-white/55 hover:bg-white/[0.04] hover:text-white"}`}
+                        >
+                          <Icon size={18} />
+                          <span className="flex-1">{item.label}</span>
+                          {pending > 0 ? <span className="rounded-full bg-rose-400/15 px-2 py-0.5 text-[10px] text-rose-200">{pending}</span> : null}
+                        </button>
+                      );
+                    })}
+                  </nav>
+                  <div className="mt-auto rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3">
+                    <p className="truncate text-sm font-bold">{admin.username}</p>
+                    <p className="mt-1 truncate text-xs text-white/40">{admin.email || "Admin account"}</p>
+                    <button type="button" onClick={onLogout} className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#a74d12] to-[#c52720] text-xs font-black text-white shadow-lg hover:brightness-110"><LogOut size={15} /> Sign out</button>
+                  </div>
+                </aside>
+              </div>
+            ) : null}
 
             {error ? <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-rose-300/15 bg-rose-300/[0.06] px-4 py-3 text-sm text-rose-100"><CircleAlert className="mt-0.5 shrink-0" size={17} />{error}</div> : null}
 

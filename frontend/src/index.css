@@ -54,3 +54,35 @@ button {
 .auth-field input::placeholder {
   color: rgba(255, 255, 255, 0.35);
 }
+
+.admin-auth-field {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(201, 151, 59, 0.14);
+  border-radius: 14px;
+  background: #1d1811;
+  padding: 0 14px;
+  color: rgba(255, 255, 255, 0.42);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.admin-auth-field:focus-within {
+  border-color: rgba(226, 181, 91, 0.55);
+  box-shadow: 0 0 0 3px rgba(201, 151, 59, 0.08);
+}
+
+.admin-auth-field input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: white;
+  font-size: 14px;
+}
+
+.admin-auth-field input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
