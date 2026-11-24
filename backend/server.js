@@ -69,6 +69,7 @@ app.use(
 /* AUTH */
 
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/deposits", require("./routes/depositRoutes"));
 app.use("/api/withdrawals", require("./routes/withdrawalRoutes"));
 

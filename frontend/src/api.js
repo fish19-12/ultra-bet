@@ -1,7 +1,8 @@
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
 
 export async function apiRequest(path, options = {}) {
-  const token = localStorage.getItem("ultraBetToken");
+  const { authToken, ...requestOptions } = options;
+  const token = authToken ?? localStorage.getItem("ultraBetToken");
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
   const headers = {
     ...(options.headers || {}),
@@ -10,7 +11,7 @@ export async function apiRequest(path, options = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(`${API_URL}${path}`, {
-    ...options,
+    ...requestOptions,
     headers,
   });
 

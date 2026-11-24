@@ -24,6 +24,7 @@ function publicUser(user) {
     lastName: user.lastName || "",
     phone: user.phone || "",
     username: user.username || "",
+    email: user.email || "",
     role: user.role,
     phoneVerified: Boolean(user.phoneVerified),
     referralCode: user.referralCode || "",
@@ -436,42 +437,42 @@ router.get("/test", (req, res) => {
 ========================= */
 router.post("/register", async (req, res) => {
   try {
-    const { username, password, adminKey } = req.body;
+    const username = String(req.body.username || "").trim().toLowerCase();
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
+    const adminKey = String(req.body.adminKey || "");
 
-    // validation
-    if (!username || !password || !adminKey) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
+    if (!username || !email || !password || !adminKey) {
+      return res.status(400).json({ success: false, message: "Username, email, password, and admin secret are required" });
     }
-
-    // admin key check
+    if (!process.env.ADMIN_SECRET_KEY) {
+      return res.status(503).json({ success: false, message: "Admin registration is not configured on the server" });
+    }
     if (adminKey !== process.env.ADMIN_SECRET_KEY) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized admin creation",
-      });
+      return res.status(403).json({ success: false, message: "Admin secret code is incorrect" });
+    }
+    if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
+      return res.status(400).json({ success: false, message: "Username must be 3–30 characters using letters, numbers, dots, underscores, or hyphens" });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, message: "Enter a valid email address" });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: "Admin password must be at least 8 characters" });
     }
 
-    // check existing user
-    const exists = await User.findOne({ username: username.trim() });
-
+    const exists = await User.findOne({ $or: [{ username }, { email }] });
     if (exists) {
-      return res.status(400).json({
-        success: false,
-        message: "User already exists",
-      });
+      return res.status(409).json({ success: false, message: "That username or email is already in use" });
     }
 
-    // create user (NO HASHING HERE — model handles it)
     const newUser = await User.create({
-      username: username.trim(),
+      username,
+      email,
       password,
       role: "admin",
     });
 
-    // generate token
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
       JWT_SECRET,
@@ -482,16 +483,20 @@ router.post("/register", async (req, res) => {
       success: true,
       message: "Admin created successfully",
       token,
-      username: newUser.username,
-      role: newUser.role,
+      user: {
+        id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+      },
     });
   } catch (err) {
-    console.error("❌ REGISTER ERROR:", err);
+    if (err.code === 11000) {
+      return res.status(409).json({ success: false, message: "That username or email is already in use" });
+    }
+    console.error("ADMIN_REGISTER_ERROR:", err);
 
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    return res.status(500).json({ success: false, message: "Unable to register admin account" });
   }
 });
 
@@ -500,39 +505,25 @@ router.post("/register", async (req, res) => {
 ========================= */
 router.post("/login", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const identity = String(req.body.username || req.body.email || req.body.identity || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
 
-    // validation
-    if (!username || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Username and password are required",
-      });
+    if (!identity || !password) {
+      return res.status(400).json({ success: false, message: "Username or email and password are required" });
     }
 
-    // find user
     const user = await User.findOne({
-      username: username.trim(),
+      role: "admin",
+      $or: [{ username: identity }, { email: identity }],
     });
 
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid credentials",
-      });
+    if (!user || !(await user.comparePassword(password))) {
+      return res.status(401).json({ success: false, message: "Invalid username/email or password" });
+    }
+    if (user.status === "disabled") {
+      return res.status(403).json({ success: false, message: "This admin account has been disabled" });
     }
 
-    // ✅ USE MODEL METHOD (FIX)
-    const isMatch = await user.comparePassword(password);
-
-    if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid credentials",
-      });
-    }
-
-    // generate token
     const token = jwt.sign(
       { id: user._id, role: user.role },
       JWT_SECRET,
@@ -543,16 +534,17 @@ router.post("/login", async (req, res) => {
       success: true,
       message: "Login successful",
       token,
-      username: user.username,
-      role: user.role,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email || "",
+        role: user.role,
+      },
     });
   } catch (err) {
-    console.error("❌ LOGIN ERROR:", err);
+    console.error("ADMIN_LOGIN_ERROR:", err);
 
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    return res.status(500).json({ success: false, message: "Unable to log in" });
   }
 });
 
