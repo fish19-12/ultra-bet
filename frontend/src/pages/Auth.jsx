@@ -35,6 +35,10 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
     setError("");
 
     if (screen === "signupOtp") {
+      if (!pendingSignup.otpSent) {
+        setError("Twilio SMS is not configured yet. Skip verification for now and continue with your new account.");
+        return;
+      }
       if (!/^\d{6}$/.test(otpCode)) {
         setError("Enter the 6-digit code sent to your phone");
         return;
@@ -155,10 +159,14 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
           });
 
       if (isSignup) {
-        setPendingSignup({ phone: payload.user.phone, auth: { token: payload.token, user: payload.user } });
+        setPendingSignup({
+          phone: payload.user.phone,
+          otpSent: Boolean(payload.otpSent),
+          auth: { token: payload.token, user: payload.user },
+        });
         setOtpCode("");
         setScreen("signupOtp");
-        setNotice(`We sent a verification code to ${payload.user.phone}.`);
+        setNotice(payload.message);
         return;
       }
       localStorage.setItem("ultraBetToken", payload.token);
@@ -213,6 +221,7 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
           method: "POST",
           body: JSON.stringify({ phone: pendingSignup.phone }),
         });
+        setPendingSignup((current) => ({ ...current, otpSent: true }));
         setNotice(response.message);
       } catch (requestError) {
         setError(requestError.message);
@@ -229,14 +238,23 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
           <div className="mx-auto mt-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f4bd38]/10 text-[#f4bd38]"><Phone size={25} /></div>
           <h1 className="mt-5 text-center text-2xl font-black">{isSignupOtp ? "Verify your phone" : "Reset your password"}</h1>
           <p className="mt-2 text-center text-sm leading-6 text-white/50">
-            {isSignupOtp ? `We sent an OTP to ${pendingSignup.phone}. Enter it below to verify your number.` : `Enter the OTP sent to ${login.phone}, then choose a new password.`}
+            {isSignupOtp
+              ? pendingSignup.otpSent
+                ? `We sent an OTP to ${pendingSignup.phone}. Enter it below to verify your number.`
+                : `Your verification step is ready for ${pendingSignup.phone}.`
+              : `Enter the OTP sent to ${login.phone}, then choose a new password.`}
           </p>
-          {notice ? <p className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-300/[0.07] px-4 py-3 text-center text-sm text-emerald-200">{notice}</p> : null}
+          {notice && (pendingSignup?.otpSent || !isSignupOtp) ? <p className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-300/[0.07] px-4 py-3 text-center text-sm text-emerald-200">{notice}</p> : null}
           <form onSubmit={submit} className="mt-5 space-y-3">
             <label className="auth-field">
               <Phone size={18} />
               <input required inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otpCode} onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit OTP" />
             </label>
+            {isSignupOtp && !pendingSignup.otpSent ? (
+              <p className="rounded-xl border border-amber-300/20 bg-amber-300/[0.08] px-4 py-3 text-sm leading-5 text-amber-100">
+                Twilio is not configured yet, so an SMS cannot be sent right now. You can skip verification and finish creating your account.
+              </p>
+            ) : null}
             {!isSignupOtp ? (
               <>
                 <label className="auth-field">
