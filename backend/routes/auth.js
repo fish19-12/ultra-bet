@@ -79,8 +79,6 @@ router.post("/signup", async (req, res) => {
       ownReferralCode = generateReferralCode();
     } while (await User.exists({ referralCode: ownReferralCode }));
 
-    await sendOtp(phone, "signup");
-
     const user = await User.create({
       // Older deployments have a unique username index that is not sparse.
       username: phone,
@@ -95,10 +93,20 @@ router.post("/signup", async (req, res) => {
       lastLoginAt: new Date(),
     });
 
+    let otpSent = false;
+    let otpMessage = "Twilio is not configured yet. You can skip verification and continue.";
+    try {
+      await sendOtp(phone, "signup");
+      otpSent = true;
+      otpMessage = `We sent a verification code to ${phone}.`;
+    } catch (smsError) {
+      console.error("SIGNUP_SMS_ERROR:", smsError.message);
+    }
+
     return res.status(201).json({
       success: true,
-      message: "We sent a verification code to your phone number",
-      otpSent: true,
+      message: otpMessage,
+      otpSent,
       token: createToken(user),
       user: publicUser(user),
     });
@@ -109,19 +117,6 @@ router.post("/signup", async (req, res) => {
         ? "This phone number is already registered"
         : "Unable to create the account because a unique value is already in use";
       return res.status(409).json({ success: false, message });
-    }
-    if (error.code === "TWILIO_NOT_CONFIGURED") {
-      return res.status(503).json({ success: false, message: error.message });
-    }
-    if (error.status === 429) {
-      return res.status(429).json({ success: false, message: error.message });
-    }
-    if (error.message && /phone number|international format/i.test(error.message)) {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-    if (error.statusCode || error.code && String(error.code).startsWith("21")) {
-      console.error("SIGNUP_SMS_ERROR:", error.message);
-      return res.status(502).json({ success: false, message: "We couldn't send the verification SMS. Check the phone number and try again." });
     }
     console.error("SIGNUP_ERROR:", error);
     return res.status(500).json({ success: false, message: "Unable to create account" });
