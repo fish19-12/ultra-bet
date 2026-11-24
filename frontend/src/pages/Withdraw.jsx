@@ -17,6 +17,7 @@ export default function Withdraw({ user, onClose, onSupport, onUserChange }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
   const method = methods.find((item) => item.id === paymentMethod);
   const numericAmount = Number(amount);
   const validAmount = Number.isFinite(numericAmount) && numericAmount >= 50 && numericAmount <= Number(user?.balance || 0);
@@ -60,6 +61,7 @@ export default function Withdraw({ user, onClose, onSupport, onUserChange }) {
       setAmount("");
       setAccountName("");
       setDestination("");
+      setConfirmed(false);
       const updatedUser = {
         ...user,
         balance: Number(user?.balance || 0) - numericAmount,
@@ -122,9 +124,13 @@ export default function Withdraw({ user, onClose, onSupport, onUserChange }) {
               <ShieldCheck className="mt-0.5 shrink-0 text-amber-200" size={15} />
               The requested amount is reserved from your available balance while pending. Rejected requests restore the amount. Approved requests are marked paid after manual review.
             </div>
+            <label className="flex cursor-pointer items-start gap-2 text-xs leading-5 text-white/55">
+              <input required type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1 accent-[#f4bd38]" />
+              I confirm the receiving account details are correct and understand the amount will be reserved while my request is reviewed.
+            </label>
             {error ? <p role="alert" className="rounded-xl border border-rose-300/15 bg-rose-300/[0.06] p-3 text-sm text-rose-100">{error}</p> : null}
             {success ? <p role="status" className="flex items-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-300/[0.06] p-3 text-sm text-emerald-100"><CheckCircle2 size={16} />{success}</p> : null}
-            <button type="submit" disabled={submitting || !validAmount} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#f4bd38] text-sm font-black text-[#17191f] disabled:cursor-not-allowed disabled:opacity-45">
+            <button type="submit" disabled={submitting || !validAmount || !confirmed} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#f4bd38] text-sm font-black text-[#17191f] disabled:cursor-not-allowed disabled:opacity-45">
               {submitting ? <LoaderCircle className="animate-spin" size={18} /> : <WalletCards size={17} />}
               {submitting ? "Submitting request..." : "Request withdrawal"}
             </button>
