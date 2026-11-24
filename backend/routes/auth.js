@@ -3,6 +3,7 @@ const router = express.Router();
 
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { sendOtp, verifyOtp } = require("../services/phoneOtp");
 
 const JWT_SECRET = require("../config/jwt");
 const { requireAuth } = require("../middleware/auth");
@@ -23,6 +24,7 @@ function publicUser(user) {
     phone: user.phone || "",
     username: user.username || "",
     role: user.role,
+    phoneVerified: Boolean(user.phoneVerified),
     referralCode: user.referralCode || "",
     balance: user.balance || 0,
     status: user.status,
@@ -77,6 +79,8 @@ router.post("/signup", async (req, res) => {
       ownReferralCode = generateReferralCode();
     } while (await User.exists({ referralCode: ownReferralCode }));
 
+    await sendOtp(phone, "signup");
+
     const user = await User.create({
       // Older deployments have a unique username index that is not sparse.
       username: phone,
@@ -85,6 +89,7 @@ router.post("/signup", async (req, res) => {
       phone,
       password,
       role: "player",
+      phoneVerified: false,
       referralCode: ownReferralCode,
       referredBy: referrer ? referrer._id : null,
       lastLoginAt: new Date(),
@@ -92,12 +97,12 @@ router.post("/signup", async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Account created successfully",
+      message: "We sent a verification code to your phone number",
+      otpSent: true,
       token: createToken(user),
       user: publicUser(user),
     });
   } catch (error) {
-    console.error("SIGNUP_ERROR:", error);
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern || {})[0];
       const message = field === "phone" || field === "username"
@@ -105,7 +110,139 @@ router.post("/signup", async (req, res) => {
         : "Unable to create the account because a unique value is already in use";
       return res.status(409).json({ success: false, message });
     }
+    if (error.code === "TWILIO_NOT_CONFIGURED") {
+      return res.status(503).json({ success: false, message: error.message });
+    }
+    if (error.status === 429) {
+      return res.status(429).json({ success: false, message: error.message });
+    }
+    if (error.message && /phone number|international format/i.test(error.message)) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    if (error.statusCode || error.code && String(error.code).startsWith("21")) {
+      console.error("SIGNUP_SMS_ERROR:", error.message);
+      return res.status(502).json({ success: false, message: "We couldn't send the verification SMS. Check the phone number and try again." });
+    }
+    console.error("SIGNUP_ERROR:", error);
     return res.status(500).json({ success: false, message: "Unable to create account" });
+  }
+});
+
+router.post("/player/verify-phone", async (req, res) => {
+  try {
+    const phone = normalizePhone(req.body.phone);
+    const code = String(req.body.code || "").trim();
+    if (!phone || !/^\d{6}$/.test(code)) {
+      return res.status(400).json({ success: false, message: "Enter the 6-digit code sent to your phone" });
+    }
+    const user = await User.findOne({ phone, role: "player" });
+    if (!user) {
+      return res.status(400).json({ success: false, message: "We couldn't verify this phone number. Please try signing up again." });
+    }
+    if (user.phoneVerified) {
+      return res.status(200).json({ success: true, message: "Phone number already verified", user: publicUser(user) });
+    }
+    if (!(await verifyOtp(phone, "signup", code))) {
+      return res.status(400).json({ success: false, message: "That code is invalid or expired. Request a new code and try again." });
+    }
+
+    user.phoneVerified = true;
+    await user.save();
+    return res.status(200).json({
+      success: true,
+      message: "Phone number verified",
+      token: createToken(user),
+      user: publicUser(user),
+    });
+  } catch (error) {
+    console.error("PHONE_VERIFICATION_ERROR:", error.message);
+    if (error.code === "TWILIO_NOT_CONFIGURED") {
+      return res.status(503).json({ success: false, message: error.message });
+    }
+    return res.status(500).json({ success: false, message: "Unable to verify phone number" });
+  }
+});
+
+router.post("/player/resend-verification", async (req, res) => {
+  try {
+    const phone = normalizePhone(req.body.phone);
+    const user = await User.findOne({ phone, role: "player" });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Account not found" });
+    }
+    if (user.phoneVerified) {
+      return res.status(400).json({ success: false, message: "This phone number is already verified" });
+    }
+    await sendOtp(phone, "signup");
+    return res.status(200).json({ success: true, message: "A new verification code was sent" });
+  } catch (error) {
+    if (error.status === 429) {
+      return res.status(429).json({ success: false, message: error.message });
+    }
+    if (error.code === "TWILIO_NOT_CONFIGURED") {
+      return res.status(503).json({ success: false, message: error.message });
+    }
+    if (error.statusCode) console.error("RESEND_VERIFICATION_SMS_ERROR:", error.message);
+    return res.status(500).json({ success: false, message: "Unable to send a new verification code" });
+  }
+});
+
+router.post("/player/forgot-password", async (req, res) => {
+  try {
+    const phone = normalizePhone(req.body.phone);
+    if (!phone || phone.length < 8 || phone.length > 16) {
+      return res.status(400).json({ success: false, message: "Enter a valid phone number" });
+    }
+    const user = await User.findOne({ phone, role: "player" });
+    if (user) {
+      await sendOtp(phone, "password-reset");
+    }
+    return res.status(200).json({
+      success: true,
+      message: "If an account exists for that number, a password reset code has been sent.",
+    });
+  } catch (error) {
+    if (error.status === 429) {
+      return res.status(429).json({ success: false, message: error.message });
+    }
+    if (error.code === "TWILIO_NOT_CONFIGURED") {
+      return res.status(503).json({ success: false, message: error.message });
+    }
+    if (error.statusCode) console.error("PASSWORD_RESET_SMS_ERROR:", error.message);
+    return res.status(502).json({ success: false, message: "Unable to send a reset code. Check the number and try again." });
+  }
+});
+
+router.post("/player/reset-password", async (req, res) => {
+  try {
+    const phone = normalizePhone(req.body.phone);
+    const code = String(req.body.code || "").trim();
+    const password = String(req.body.password || "");
+    const confirmPassword = String(req.body.confirmPassword || "");
+
+    if (!phone || !/^\d{6}$/.test(code)) {
+      return res.status(400).json({ success: false, message: "Enter the 6-digit code sent to your phone" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
+    }
+    if (password !== confirmPassword) {
+      return res.status(400).json({ success: false, message: "Passwords do not match" });
+    }
+    const user = await User.findOne({ phone, role: "player" });
+    if (!user || !(await verifyOtp(phone, "password-reset", code))) {
+      return res.status(400).json({ success: false, message: "That code is invalid or expired. Request a new code and try again." });
+    }
+
+    user.password = password;
+    await user.save();
+    return res.status(200).json({ success: true, message: "Password reset successfully. You can now log in." });
+  } catch (error) {
+    console.error("PASSWORD_RESET_ERROR:", error.message);
+    if (error.code === "TWILIO_NOT_CONFIGURED") {
+      return res.status(503).json({ success: false, message: error.message });
+    }
+    return res.status(500).json({ success: false, message: "Unable to reset password" });
   }
 });
 

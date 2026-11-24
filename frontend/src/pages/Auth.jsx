@@ -19,6 +19,12 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(null);
+  const [screen, setScreen] = useState("form");
+  const [pendingSignup, setPendingSignup] = useState(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [notice, setNotice] = useState("");
 
   const updateSignup = (field) => (event) => {
     setSignup((current) => ({ ...current, [field]: event.target.value }));
@@ -27,6 +33,97 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
   const submit = async (event) => {
     event.preventDefault();
     setError("");
+
+    if (screen === "signupOtp") {
+      if (!/^\d{6}$/.test(otpCode)) {
+        setError("Enter the 6-digit code sent to your phone");
+        return;
+      }
+      setLoading(true);
+      try {
+        const verified = await apiRequest("/api/auth/player/verify-phone", {
+          method: "POST",
+          body: JSON.stringify({ phone: pendingSignup.phone, code: otpCode }),
+        });
+        const auth = {
+          token: verified.token || pendingSignup.auth.token,
+          user: verified.user || pendingSignup.auth.user,
+        };
+        localStorage.setItem("ultraBetToken", auth.token);
+        localStorage.setItem("ultraBetUser", JSON.stringify(auth.user));
+        setSuccess({
+          ...auth,
+          title: "Registration successful!",
+          description: "Your phone number is verified and your Ultra Bet account is ready.",
+        });
+      } catch (requestError) {
+        setError(requestError.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (screen === "forgot") {
+      const phone = login.phone.trim();
+      if (phone.replace(/\D/g, "").length < 8) {
+        setError("Enter your phone number first");
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await apiRequest("/api/auth/player/forgot-password", {
+          method: "POST",
+          body: JSON.stringify({ phone }),
+        });
+        setNotice(response.message);
+        setScreen("resetOtp");
+        setError("");
+      } catch (requestError) {
+        setError(requestError.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (screen === "resetOtp") {
+      if (!/^\d{6}$/.test(otpCode)) {
+        setError("Enter the 6-digit code sent to your phone");
+        return;
+      }
+      if (resetPassword.length < 6) {
+        setError("Password must be at least 6 characters");
+        return;
+      }
+      if (resetPassword !== resetConfirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await apiRequest("/api/auth/player/reset-password", {
+          method: "POST",
+          body: JSON.stringify({
+            phone: login.phone.trim(),
+            code: otpCode,
+            password: resetPassword,
+            confirmPassword: resetConfirmPassword,
+          }),
+        });
+        setLogin((current) => ({ ...current, password: "" }));
+        setOtpCode("");
+        setResetPassword("");
+        setResetConfirmPassword("");
+        setNotice(response.message);
+        setScreen("form");
+      } catch (requestError) {
+        setError(requestError.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     if (isSignup && (!signup.firstName.trim() || !signup.lastName.trim())) {
       setError("Enter your first and last name");
@@ -57,14 +154,20 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
             body: JSON.stringify(login),
           });
 
+      if (isSignup) {
+        setPendingSignup({ phone: payload.user.phone, auth: { token: payload.token, user: payload.user } });
+        setOtpCode("");
+        setScreen("signupOtp");
+        setNotice(`We sent a verification code to ${payload.user.phone}.`);
+        return;
+      }
       localStorage.setItem("ultraBetToken", payload.token);
       localStorage.setItem("ultraBetUser", JSON.stringify(payload.user));
       setSuccess({
+        token: payload.token,
         user: payload.user,
-        title: isSignup ? "Your account is ready!" : "Welcome back!",
-        description: isSignup
-          ? "Your Ultra Bet profile has been created successfully."
-          : "You have signed in successfully.",
+        title: "Welcome back!",
+        description: "You have signed in successfully.",
       });
     } catch (requestError) {
       setError(requestError.message);
@@ -100,6 +203,82 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
     );
   }
 
+  if (screen === "signupOtp" || screen === "resetOtp") {
+    const isSignupOtp = screen === "signupOtp";
+    const resendSignupCode = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        const response = await apiRequest("/api/auth/player/resend-verification", {
+          method: "POST",
+          body: JSON.stringify({ phone: pendingSignup.phone }),
+        });
+        setNotice(response.message);
+      } catch (requestError) {
+        setError(requestError.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#090a12]/80 backdrop-blur-md sm:items-center sm:p-5">
+        <div className="relative w-full rounded-t-[28px] border border-white/[0.08] bg-[#171a2b] px-5 pb-8 pt-7 shadow-[0_-20px_70px_rgba(0,0,0,.42)] sm:max-w-[470px] sm:rounded-[28px] sm:p-8">
+          <button type="button" onClick={onClose} className="absolute right-5 top-5 hidden h-9 w-9 items-center justify-center rounded-full border border-white/10 text-white/50 hover:text-white sm:flex" aria-label="Close">×</button>
+          <img src="/logo.png" alt="Ultra Bet" className="mx-auto h-14 max-w-[180px] object-contain" />
+          <div className="mx-auto mt-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f4bd38]/10 text-[#f4bd38]"><Phone size={25} /></div>
+          <h1 className="mt-5 text-center text-2xl font-black">{isSignupOtp ? "Verify your phone" : "Reset your password"}</h1>
+          <p className="mt-2 text-center text-sm leading-6 text-white/50">
+            {isSignupOtp ? `We sent an OTP to ${pendingSignup.phone}. Enter it below to verify your number.` : `Enter the OTP sent to ${login.phone}, then choose a new password.`}
+          </p>
+          {notice ? <p className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-300/[0.07] px-4 py-3 text-center text-sm text-emerald-200">{notice}</p> : null}
+          <form onSubmit={submit} className="mt-5 space-y-3">
+            <label className="auth-field">
+              <Phone size={18} />
+              <input required inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otpCode} onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit OTP" />
+            </label>
+            {!isSignupOtp ? (
+              <>
+                <label className="auth-field">
+                  <LockKeyhole size={18} />
+                  <input required minLength={6} type="password" autoComplete="new-password" value={resetPassword} onChange={(event) => setResetPassword(event.target.value)} placeholder="New password" />
+                </label>
+                <label className="auth-field">
+                  <LockKeyhole size={18} />
+                  <input required minLength={6} type="password" autoComplete="new-password" value={resetConfirmPassword} onChange={(event) => setResetConfirmPassword(event.target.value)} placeholder="Confirm new password" />
+                </label>
+              </>
+            ) : null}
+            {error ? <div className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">{error}</div> : null}
+            <button type="submit" disabled={loading} className="flex h-[52px] w-full items-center justify-center rounded-xl bg-[#f4bd38] font-black text-[#17191f] disabled:opacity-60">
+              {loading ? "Please wait..." : isSignupOtp ? "Verify and continue" : "Reset password"}
+            </button>
+          </form>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+            {isSignupOtp ? (
+              <>
+                <button type="button" disabled={loading} onClick={resendSignupCode} className="font-bold text-[#f4bd38] disabled:opacity-50">Resend OTP</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem("ultraBetToken", pendingSignup.auth.token);
+                    localStorage.setItem("ultraBetUser", JSON.stringify(pendingSignup.auth.user));
+                    setSuccess({ ...pendingSignup.auth, title: "Registration successful!", description: "Your Ultra Bet account is ready. You can verify your phone later from your account." });
+                  }}
+                  className="font-bold text-white/60 hover:text-white"
+                >
+                  Skip for now
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => { setScreen("form"); setError(""); setNotice(""); }} className="font-bold text-[#f4bd38]">Back to login</button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#090a12]/75 backdrop-blur-md sm:items-center sm:p-5">
       <button type="button" onClick={onClose} className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#171a2b] text-white/70 sm:hidden" aria-label="Close">
@@ -112,11 +291,12 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
         </button>
 
         <img src="/logo.png" alt="Ultra Bet" className="mx-auto h-14 max-w-[180px] object-contain" />
-        <h1 className="mt-5 text-center text-2xl font-black">{isSignup ? "Create an account" : "Welcome back"}</h1>
+        <h1 className="mt-5 text-center text-2xl font-black">{screen === "forgot" ? "Forgot password" : isSignup ? "Create an account" : "Welcome back"}</h1>
         <p className="mt-2 text-center text-sm text-white/45">
-          {isSignup ? "Join Ultra Bet in less than a minute" : "Log in to continue"}
+          {screen === "forgot" ? "Enter your registered phone number to receive a reset code." : isSignup ? "Join Ultra Bet in less than a minute" : "Log in to continue"}
         </p>
 
+        {notice ? <p className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-300/[0.07] px-4 py-3 text-center text-sm text-emerald-200">{notice}</p> : null}
         <form onSubmit={submit} className="mt-6 space-y-3">
           {isSignup ? (
             <div className="grid grid-cols-2 gap-3">
@@ -136,13 +316,15 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
             <input required value={values.phone} onChange={setValue("phone")} placeholder="Phone Number" inputMode="tel" autoComplete="tel" maxLength={20} />
           </label>
 
-          <label className="auth-field">
-            <LockKeyhole size={18} />
-            <input required minLength={6} value={values.password} onChange={setValue("password")} type={showPassword ? "text" : "password"} placeholder="Password" autoComplete={isSignup ? "new-password" : "current-password"} />
-            <button type="button" onClick={() => setShowPassword((shown) => !shown)} className="ml-auto text-white/40" aria-label={showPassword ? "Hide password" : "Show password"}>
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </label>
+          {screen !== "forgot" ? (
+            <label className="auth-field">
+              <LockKeyhole size={18} />
+              <input required minLength={6} value={values.password} onChange={setValue("password")} type={showPassword ? "text" : "password"} placeholder="Password" autoComplete={isSignup ? "new-password" : "current-password"} />
+              <button type="button" onClick={() => setShowPassword((shown) => !shown)} className="ml-auto text-white/40" aria-label={showPassword ? "Hide password" : "Show password"}>
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </label>
+          ) : null}
 
           {isSignup ? (
             <>
@@ -163,16 +345,26 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
           ) : null}
 
           <button type="submit" disabled={loading} className="mt-2 flex h-[52px] w-full items-center justify-center rounded-xl bg-[#f4bd38] font-black text-[#17191f] shadow-[0_10px_24px_rgba(244,189,56,.16)] disabled:opacity-60">
-            {loading ? "Please wait..." : isSignup ? "Create account" : "Log in"}
+            {loading ? "Please wait..." : screen === "forgot" ? "Send reset code" : isSignup ? "Create account" : "Log in"}
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-white/55">
+        {screen === "forgot" ? (
+          <button type="button" onClick={() => { setScreen("form"); setError(""); setNotice(""); }} className="mt-5 block w-full text-center text-sm font-bold text-[#f4bd38]">
+            Back to login
+          </button>
+        ) : !isSignup ? (
+          <button type="button" onClick={() => { setScreen("forgot"); setError(""); setNotice(""); }} className="mt-4 block w-full text-center text-sm font-bold text-[#f4bd38]">
+            Forgot password?
+          </button>
+        ) : null}
+
+        {screen === "form" ? <p className="mt-5 text-center text-sm text-white/55">
           {isSignup ? "Already have an account?" : "Don't have an account?"}
           <button type="button" onClick={onSwitch} className="ml-2 font-bold text-[#f4bd38]">
             {isSignup ? "Log in" : "Sign up"}
           </button>
-        </p>
+        </p> : null}
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema({
   role: { type: String, enum: ["player", "admin"], default: "player" },
   referralCode: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  phoneVerified: { type: Boolean, default: false },
   balance: { type: Number, default: 0 },
   status: { type: String, enum: ["active", "disabled"], default: "active" },
   lastLoginAt: { type: Date, default: null },
