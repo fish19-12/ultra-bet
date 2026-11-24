@@ -7,6 +7,7 @@ const { sendOtp, verifyOtp } = require("../services/phoneOtp");
 
 const JWT_SECRET = require("../config/jwt");
 const { requireAuth } = require("../middleware/auth");
+const WELCOME_BONUS_AMOUNT = 50;
 
 function createToken(user) {
   return jwt.sign(
@@ -27,6 +28,8 @@ function publicUser(user) {
     phoneVerified: Boolean(user.phoneVerified),
     referralCode: user.referralCode || "",
     balance: user.balance || 0,
+    bonusBalance: user.bonusBalance || 0,
+    welcomeBonusAccepted: Boolean(user.welcomeBonusAcceptedAt),
     status: user.status,
   };
 }
@@ -101,6 +104,9 @@ router.post("/signup", async (req, res) => {
       otpMessage = `We sent a verification code to ${phone}.`;
     } catch (smsError) {
       console.error("SIGNUP_SMS_ERROR:", smsError.message);
+      if (smsError.code !== "TWILIO_NOT_CONFIGURED") {
+        otpMessage = "We couldn't send the verification code right now. You can skip verification and continue.";
+      }
     }
 
     return res.status(201).json({
@@ -120,6 +126,57 @@ router.post("/signup", async (req, res) => {
     }
     console.error("SIGNUP_ERROR:", error);
     return res.status(500).json({ success: false, message: "Unable to create account" });
+  }
+});
+
+router.post("/welcome-bonus/accept", requireAuth, async (req, res) => {
+  try {
+    if (req.auth.role !== "player") {
+      return res.status(403).json({ success: false, message: "Welcome bonus is available to player accounts only" });
+    }
+
+    const user = await User.findOneAndUpdate(
+      {
+        _id: req.auth.id,
+        role: "player",
+        status: "active",
+        welcomeBonusAcceptedAt: null,
+      },
+      {
+        $inc: { bonusBalance: WELCOME_BONUS_AMOUNT },
+        $set: { welcomeBonusAcceptedAt: new Date() },
+      },
+      { new: true },
+    );
+
+    if (!user) {
+      const existingUser = await User.findById(req.auth.id);
+      if (!existingUser) {
+        return res.status(404).json({ success: false, message: "Account not found" });
+      }
+      if (existingUser.status !== "active") {
+        return res.status(403).json({ success: false, message: "Your account has been disabled" });
+      }
+      if (existingUser.role !== "player") {
+        return res.status(403).json({ success: false, message: "Welcome bonus is available to player accounts only" });
+      }
+      return res.status(200).json({
+        success: true,
+        alreadyAccepted: true,
+        message: "Your welcome bonus was already accepted",
+        user: publicUser(existingUser),
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      alreadyAccepted: false,
+      message: "50 ETB welcome bonus added to your bonus account",
+      user: publicUser(user),
+    });
+  } catch (error) {
+    console.error("WELCOME_BONUS_ERROR:", error);
+    return res.status(500).json({ success: false, message: "Unable to add the welcome bonus" });
   }
 });
 

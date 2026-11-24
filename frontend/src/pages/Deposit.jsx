@@ -5,6 +5,7 @@ import {
   Clock3,
   Copy,
   CreditCard,
+  Gift,
   ImagePlus,
   Landmark,
   LoaderCircle,
@@ -74,6 +75,10 @@ export default function Deposit({ user, onClose, onSupport, onWithdraw }) {
     () => Number(user?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     [user?.balance],
   );
+  const formattedBonusBalance = useMemo(
+    () => Number(user?.bonusBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    [user?.bonusBalance],
+  );
 
   const copyAccount = async () => {
     await navigator.clipboard?.writeText(selectedMethod.account);
@@ -141,7 +146,7 @@ export default function Deposit({ user, onClose, onSupport, onWithdraw }) {
       <main className="mx-auto grid max-w-6xl gap-5 px-4 py-5 pb-12 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:py-8">
         <section>
           <div className="rounded-3xl border border-white/[0.07] bg-gradient-to-br from-[#24213d] via-[#1b1d32] to-[#17192b] p-5 sm:p-7">
-            <p className="text-xs font-bold uppercase tracking-[.16em] text-white/45">Available balance</p>
+            <p className="text-xs font-bold uppercase tracking-[.16em] text-white/45">Cash balance</p>
             <div className="mt-2 flex items-end justify-between gap-4">
               <p className="text-3xl font-black sm:text-4xl">{formattedBalance} <span className="text-lg text-white/50">ETB</span></p>
               <button type="button" onClick={onWithdraw} className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-bold text-white/70 hover:text-white">Withdraw</button>
@@ -150,6 +155,17 @@ export default function Deposit({ user, onClose, onSupport, onWithdraw }) {
               <ShieldCheck className="mt-0.5 shrink-0 text-emerald-300" size={16} />
               Deposits are added to your balance only after an administrator verifies the payment.
             </div>
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-[#f4bd38]/15 bg-gradient-to-br from-[#322842] to-[#1d1b30] p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f4bd38]/10 text-[#f4bd38]"><Gift size={19} /></span>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[.12em] text-white/45">Bonus account</p>
+                <p className="mt-0.5 text-xl font-black text-[#f4bd38]">{formattedBonusBalance} <span className="text-sm text-white/45">ETB</span></p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs leading-5 text-white/45">Play-only bonus funds are separate from cash and cannot be withdrawn. Games are currently demos and do not accept real wagers.</p>
           </div>
 
           <div className="mt-5 rounded-3xl border border-white/[0.07] bg-[#191c30] p-5 sm:p-7">

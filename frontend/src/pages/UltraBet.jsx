@@ -385,7 +385,7 @@ export default function UltraBet() {
             {loggedIn ? (
               <button type="button" onClick={openDeposit} className="flex items-center gap-1.5 rounded-xl border border-[#f4bd38]/15 bg-[#f4bd38]/[0.07] px-2.5 py-2.5 text-xs font-black text-[#f4bd38] transition hover:bg-[#f4bd38]/[0.12] sm:gap-2 sm:px-4 sm:text-sm">
                 <WalletCards size={17} className="text-[#f4bd38]" />
-                {Number(user?.balance || 0).toFixed(2)} ETB
+                {(Number(user?.balance || 0) + Number(user?.bonusBalance || 0)).toFixed(2)} ETB
               </button>
             ) : null}
             {loggedIn ? (

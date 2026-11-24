@@ -12,6 +12,8 @@ const UserSchema = new mongoose.Schema({
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   phoneVerified: { type: Boolean, default: false },
   balance: { type: Number, default: 0 },
+  bonusBalance: { type: Number, default: 0, min: 0 },
+  welcomeBonusAcceptedAt: { type: Date, default: null },
   status: { type: String, enum: ["active", "disabled"], default: "active" },
   lastLoginAt: { type: Date, default: null },
 }, {

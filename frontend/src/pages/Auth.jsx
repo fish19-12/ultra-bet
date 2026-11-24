@@ -19,6 +19,8 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(null);
+  const [bonusLoading, setBonusLoading] = useState(false);
+  const [bonusError, setBonusError] = useState("");
   const [screen, setScreen] = useState("form");
   const [pendingSignup, setPendingSignup] = useState(null);
   const [otpCode, setOtpCode] = useState("");
@@ -30,13 +32,36 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
     setSignup((current) => ({ ...current, [field]: event.target.value }));
   };
 
+  const acceptWelcomeBonus = async () => {
+    setBonusError("");
+    setBonusLoading(true);
+    try {
+      const payload = await apiRequest("/api/auth/welcome-bonus/accept", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      localStorage.setItem("ultraBetUser", JSON.stringify(payload.user));
+      setSuccess((current) => ({
+        ...current,
+        user: payload.user,
+        bonusPending: false,
+        title: "Welcome bonus accepted!",
+        description: "Your 50 ETB play bonus is now in your bonus account.",
+      }));
+    } catch (requestError) {
+      setBonusError(requestError.message);
+    } finally {
+      setBonusLoading(false);
+    }
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setError("");
 
     if (screen === "signupOtp") {
       if (!pendingSignup.otpSent) {
-        setError("Twilio SMS is not configured yet. Skip verification for now and continue with your new account.");
+        setError(pendingSignup.otpMessage);
         return;
       }
       if (!/^\d{6}$/.test(otpCode)) {
@@ -57,6 +82,7 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
         localStorage.setItem("ultraBetUser", JSON.stringify(auth.user));
         setSuccess({
           ...auth,
+          bonusPending: true,
           title: "Registration successful!",
           description: "Your phone number is verified and your Ultra Bet account is ready.",
         });
@@ -162,6 +188,7 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
         setPendingSignup({
           phone: payload.user.phone,
           otpSent: Boolean(payload.otpSent),
+          otpMessage: payload.message,
           auth: { token: payload.token, user: payload.user },
         });
         setOtpCode("");
@@ -192,20 +219,48 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
   if (success) {
     return (
       <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#090a12]/80 backdrop-blur-md sm:items-center sm:p-5">
-        <div className="w-full rounded-t-[28px] border border-white/[0.08] bg-[#171a2b] px-6 pb-9 pt-8 text-center shadow-[0_-20px_70px_rgba(0,0,0,.42)] sm:max-w-[430px] sm:rounded-[28px] sm:px-9 sm:py-10">
+        <div className="w-full rounded-t-[28px] border border-white/[0.08] bg-[#171a2b] px-6 pb-8 pt-8 text-center shadow-[0_-20px_70px_rgba(0,0,0,.42)] sm:max-w-[430px] sm:rounded-[28px] sm:px-9 sm:py-10">
           <img src="/logo.png" alt="Ultra Bet" className="mx-auto h-14 max-w-[180px] object-contain" />
-          <div className="mx-auto mt-8 flex h-[76px] w-[76px] items-center justify-center rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20">
-            <Check size={38} strokeWidth={3} />
-          </div>
+          {success.bonusPending ? (
+            <div className="mx-auto mt-7 flex h-[76px] w-[76px] items-center justify-center rounded-full bg-[#f4bd38]/10 text-[#f4bd38] ring-1 ring-[#f4bd38]/20">
+              <Gift size={36} />
+            </div>
+          ) : (
+            <div className="mx-auto mt-7 flex h-[76px] w-[76px] items-center justify-center rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20">
+              <Check size={38} strokeWidth={3} />
+            </div>
+          )}
           <h1 className="mt-6 text-2xl font-black">{success.title}</h1>
           <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-white/50">{success.description}</p>
-          <button
-            type="button"
-            onClick={() => onSuccess(success.user)}
-            className="mt-7 h-[52px] w-full rounded-xl bg-[#f4bd38] font-black text-[#17191f] shadow-[0_10px_24px_rgba(244,189,56,.16)]"
-          >
-            Continue to Ultra Bet
-          </button>
+          {success.bonusPending ? (
+            <>
+              <div className="mt-5 rounded-2xl border border-[#f4bd38]/20 bg-gradient-to-br from-[#392d47] to-[#242037] p-4 text-left">
+                <p className="text-xs font-bold uppercase tracking-[.15em] text-[#f4bd38]">A welcome gift for you</p>
+                <p className="mt-1 text-2xl font-black">50 ETB <span className="text-sm font-bold text-white/50">play bonus</span></p>
+                <p className="mt-2 text-xs leading-5 text-white/55">Accept to add it to your separate bonus balance. Bonus funds are not withdrawable. Games and markets are currently demos, so real wagers are not enabled yet.</p>
+              </div>
+              {bonusError ? <p role="alert" className="mt-3 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-left text-sm text-red-200">{bonusError}</p> : null}
+              <button
+                type="button"
+                onClick={acceptWelcomeBonus}
+                disabled={bonusLoading}
+                className="mt-5 h-[52px] w-full rounded-xl bg-[#f4bd38] font-black text-[#17191f] shadow-[0_10px_24px_rgba(244,189,56,.16)] disabled:opacity-60"
+              >
+                {bonusLoading ? "Adding your bonus..." : "Accept 50 ETB bonus"}
+              </button>
+              <button type="button" onClick={() => onSuccess(success.user)} className="mt-3 w-full py-2 text-sm font-bold text-white/50 hover:text-white">
+                Continue without the bonus
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onSuccess(success.user)}
+              className="mt-7 h-[52px] w-full rounded-xl bg-[#f4bd38] font-black text-[#17191f] shadow-[0_10px_24px_rgba(244,189,56,.16)]"
+            >
+              Continue to Ultra Bet
+            </button>
+          )}
         </div>
       </div>
     );
@@ -252,7 +307,7 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
             </label>
             {isSignupOtp && !pendingSignup.otpSent ? (
               <p className="rounded-xl border border-amber-300/20 bg-amber-300/[0.08] px-4 py-3 text-sm leading-5 text-amber-100">
-                Twilio is not configured yet, so an SMS cannot be sent right now. You can skip verification and finish creating your account.
+                {pendingSignup.otpMessage}
               </p>
             ) : null}
             {!isSignupOtp ? (
@@ -281,7 +336,7 @@ export default function Auth({ mode, onSuccess, onSwitch, onClose }) {
                   onClick={() => {
                     localStorage.setItem("ultraBetToken", pendingSignup.auth.token);
                     localStorage.setItem("ultraBetUser", JSON.stringify(pendingSignup.auth.user));
-                    setSuccess({ ...pendingSignup.auth, title: "Registration successful!", description: "Your Ultra Bet account is ready. You can verify your phone later from your account." });
+                    setSuccess({ ...pendingSignup.auth, bonusPending: true, title: "Registration successful!", description: "Your Ultra Bet account is ready. You can verify your phone later from your account." });
                   }}
                   className="font-bold text-white/60 hover:text-white"
                 >

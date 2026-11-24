@@ -151,7 +151,7 @@ export default function Profile({ user, onClose, onUserChange, onLogout, onDepos
             <ArrowLeft size={19} /> <span>{view === "overview" ? "Lobby" : "Back"}</span>
           </button>
           <div className="flex items-center gap-2">
-            <span className="hidden items-center gap-1.5 text-xs font-black sm:flex"><WalletCards size={16} className="text-[#f4bd38]" />{amount(user?.balance)} ETB</span>
+            <span className="hidden items-center gap-1.5 text-xs font-black sm:flex"><WalletCards size={16} className="text-[#f4bd38]" />{amount(Number(user?.balance || 0) + Number(user?.bonusBalance || 0))} ETB</span>
             <button type="button" onClick={onDeposit} className="rounded-lg bg-[#f4bd38] px-3 py-2 text-xs font-black text-[#17191f]">Deposit</button>
           </div>
           <span className="max-w-[72px] truncate text-xs font-bold text-white/50 sm:max-w-none">{view === "overview" ? "Profile" : ({ password: "Security", details: "Personal details", transactions: "Transactions", terms: "Terms", support: "Support" }[view])}</span>
@@ -234,6 +234,7 @@ export default function Profile({ user, onClose, onUserChange, onLogout, onDepos
               {[
                 ["Account security", "You are responsible for keeping your password and account access private. Contact support if you believe someone else accessed your account."],
                 ["Deposits and balance", "A deposit request remains pending until an administrator checks the payment proof. Funds are added only after approval. Never send money to an account number that differs from the details shown in the deposit screen."],
+                ["Welcome bonus", "The 50 ETB welcome bonus is a separate play-only balance granted once after you accept it. It is not cash and cannot be withdrawn. Games and markets are currently demos, so real wagering is not active."],
                 ["Sports and game previews", "Sports fixtures and odds currently shown are demonstrations only. They are not live data, and no real bet can be placed or settled through these demo markets."],
                 ["Responsible use", "Only use betting-related services if you meet the legal age and local requirements where you live. Set limits and seek help if gambling stops being enjoyable."],
                 ["Updates", "These terms may be updated as Ultra Bet features and operating requirements change. Check this page for the latest version."],
@@ -284,8 +285,12 @@ export default function Profile({ user, onClose, onUserChange, onLogout, onDepos
 
             <section className="mt-3 grid gap-3 lg:grid-cols-[1.15fr_.85fr]">
               <div className="rounded-2xl border border-[#f4bd38]/15 bg-gradient-to-br from-[#312844] via-[#27213a] to-[#202238] p-4 sm:p-5">
-                <div className="flex items-center gap-2 text-xs font-bold text-white/55"><WalletCards size={16} className="text-[#f4bd38]" /> Total available balance</div>
-                <p className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{amount(user?.balance)} <span className="text-base text-white/45">ETB</span></p>
+                <div className="flex items-center gap-2 text-xs font-bold text-white/55"><WalletCards size={16} className="text-[#f4bd38]" /> Total account balance</div>
+                <p className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{amount(Number(user?.balance || 0) + Number(user?.bonusBalance || 0))} <span className="text-base text-white/45">ETB</span></p>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/45">
+                  <span>Cash: <strong className="text-white/75">{amount(user?.balance)} ETB</strong></span>
+                  <span>Play bonus: <strong className="text-[#f4bd38]">{amount(user?.bonusBalance)} ETB</strong></span>
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" onClick={onDeposit} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[#f4bd38] px-4 text-sm font-black text-[#17191f] shadow-[0_8px_24px_rgba(244,189,56,.15)] transition hover:bg-[#ffd45d]">
                     <CreditCardIcon /> Deposit funds
@@ -297,7 +302,7 @@ export default function Profile({ user, onClose, onUserChange, onLogout, onDepos
                     {loading ? <LoaderCircle className="animate-spin" size={14} /> : <UserRound size={14} />} Refresh
                   </button>
                 </div>
-                <p className="mt-3 text-[11px] leading-4 text-white/40">Pending deposits are credited only after review. Pending withdrawals are reserved from your available balance.</p>
+                <p className="mt-3 text-[11px] leading-4 text-white/40">Withdrawals use cash balance only. Play bonus funds are separate and cannot be withdrawn; real wagering is not enabled yet.</p>
               </div>
 
               <div className="rounded-2xl border border-white/[0.07] bg-[#191c30] p-4 sm:p-5">
