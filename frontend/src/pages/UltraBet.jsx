@@ -15,6 +15,7 @@ import Auth from "./Auth";
 import Profile from "./Profile";
 import Deposit from "./Deposit";
 import Withdraw from "./Withdraw";
+import DemoGame from "../components/DemoGame";
 import { apiRequest } from "../api";
 import sportsBanner from "../assets/banner 1.png";
 import virtualGamesBanner from "../assets/banner.png";
@@ -494,26 +495,7 @@ export default function UltraBet() {
       )}
 
       {selectedGame ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
-          <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#1b1e33] p-5 shadow-2xl">
-            <button type="button" onClick={() => setSelectedGame(null)} className="absolute right-4 top-4 rounded-full border border-white/10 p-2 text-white/60" aria-label="Close">
-              <X size={18} />
-            </button>
-            <div className={`relative mt-2 flex aspect-[1.8] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${selectedGame.color}`}>
-              {selectedGame.image ? (
-                <img src={selectedGame.image} alt={`${selectedGame.title} game artwork`} className="absolute inset-0 h-full w-full object-contain" />
-              ) : (
-                <span className="text-6xl font-black text-white drop-shadow-xl">{selectedGame.mark}</span>
-              )}
-            </div>
-            <h2 className="mt-5 text-2xl font-black">{selectedGame.title}</h2>
-            <p className="mt-2 text-sm text-white/50">Demo lobby · Sign in to play and use real-time features.</p>
-            <button type="button" onClick={() => loggedIn ? setSelectedGame(null) : setAuthMode("login")} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#f4bd38] font-black text-[#17191f]">
-              <Play size={18} fill="currentColor" />
-              Play now
-            </button>
-          </div>
-        </div>
+        <DemoGame game={selectedGame} onClose={() => setSelectedGame(null)} />
       ) : null}
 
       {authMode ? (
