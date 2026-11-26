@@ -1,15 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, RotateCcw, X } from "lucide-react";
 
-const STARTING_CREDITS = 1000;
 const MINE_COUNT = 3;
 const SLOT_SYMBOLS = ["🍒", "🍋", "🍇", "🔔", "7️⃣"];
 const PLINKO_MULTIPLIERS = [0, 0.5, 0.8, 1, 1.2, 1.5, 2, 5];
-
-function readCredits() {
-  const saved = Number(localStorage.getItem("ultraBetDemoCredits"));
-  return Number.isFinite(saved) && saved >= 0 ? saved : STARTING_CREDITS;
-}
 
 function getGameType(title) {
   if (["Aviator", "JetX", "Spaceman", "Crash", "Rocket Rush", "Space Flight"].includes(title)) return "crash";
@@ -71,8 +65,7 @@ function GameButton({ children, onClick, disabled = false, secondary = false }) 
   );
 }
 
-export default function DemoGame({ game, onClose }) {
-  const [credits, setCredits] = useState(readCredits);
+export default function DemoGame({ game, onClose, credits, setCredits }) {
   const [bet, setBet] = useState("10");
   const [message, setMessage] = useState("");
   const [crashRunning, setCrashRunning] = useState(false);
@@ -90,10 +83,6 @@ export default function DemoGame({ game, onClose }) {
     () => (25 / (25 - revealed.length)) * 0.95,
     [revealed.length],
   );
-
-  useEffect(() => {
-    localStorage.setItem("ultraBetDemoCredits", String(credits));
-  }, [credits]);
 
   useEffect(() => {
     if (!crashRunning) return undefined;
@@ -248,7 +237,7 @@ export default function DemoGame({ game, onClose }) {
   };
 
   const resetCredits = () => {
-    setCredits(STARTING_CREDITS);
+    setCredits(1000);
     setMessage("Demo credits reset to 1,000.");
   };
 

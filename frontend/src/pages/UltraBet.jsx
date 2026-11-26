@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Gift,
   Gamepad2,
@@ -99,6 +99,25 @@ const demoEvents = [
   { id: "v1", sport: "Volleyball", league: "Demo Volleyball", time: "Tomorrow · 16:30", home: "East Spikers", away: "West Blockers", odds: ["1.80", "—", "2.00"] },
 ];
 
+function readDemoCredits() {
+  try {
+    const saved = localStorage.getItem("ultraBetDemoCredits");
+    const amount = saved === null ? 1000 : Number(saved);
+    return Number.isFinite(amount) && amount >= 0 ? amount : 1000;
+  } catch {
+    return 1000;
+  }
+}
+
+function readDemoBets() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("ultraBetDemoBets") || "[]");
+    return Array.isArray(saved) ? saved.slice(0, 20) : [];
+  } catch {
+    return [];
+  }
+}
+
 function GameCard({ game, onOpen }) {
   return (
     <button
@@ -180,25 +199,50 @@ function HeroCarousel({ onSports, onGames, onDeposit }) {
   );
 }
 
-function SportsLobby({ loggedIn, onLogin }) {
+function SportsLobby({ loggedIn, onLogin, credits, demoBets, onPlaceBet, onSettleBet }) {
   const sports = ["All sports", "Football", "Basketball", "Tennis", "Volleyball"];
   const [sport, setSport] = useState("All sports");
-  const [selection, setSelection] = useState(null);
+  const [selections, setSelections] = useState([]);
   const [stake, setStake] = useState("");
   const [notice, setNotice] = useState("");
   const events = sport === "All sports" ? demoEvents : demoEvents.filter((event) => event.sport === sport);
-  const potentialReturn = Number(stake) * Number(selection?.odds || 0);
+  const combinedOdds = selections.reduce((total, selection) => total * Number(selection.odds), 1);
+  const potentialReturn = Number(stake) * combinedOdds;
+  const validStake = Number.isFinite(Number(stake)) && Number(stake) >= 10 && Number(stake) <= credits;
 
-  const previewBet = () => {
+  const toggleSelection = (nextSelection) => {
+    setSelections((current) => {
+      const existing = current.find((item) => item.eventId === nextSelection.eventId);
+      if (existing?.pick === nextSelection.pick) {
+        return current.filter((item) => item.eventId !== nextSelection.eventId);
+      }
+      return [...current.filter((item) => item.eventId !== nextSelection.eventId), nextSelection];
+    });
+    setNotice("");
+  };
+
+  const placeBet = () => {
     if (!loggedIn) {
       onLogin();
       return;
     }
-    if (!selection || Number(stake) < 10) {
-      setNotice("Choose a market and enter a demo stake of at least 10 ETB.");
+    if (!selections.length || !validStake) {
+      setNotice(credits < 10 ? "Not enough demo credits. Play a game or reset your practice balance." : "Choose at least one market and enter a stake of at least 10 demo credits.");
       return;
     }
-    setNotice("Demo only: this selection was not placed and no balance was changed.");
+    const placed = onPlaceBet({
+      selections,
+      stake: Number(stake),
+      combinedOdds: Number(combinedOdds.toFixed(2)),
+      potentialReturn: Number(potentialReturn.toFixed(2)),
+    });
+    if (!placed) {
+      setNotice("That stake is no longer available. Review your practice balance and try again.");
+      return;
+    }
+    setSelections([]);
+    setStake("");
+    setNotice("Practice bet placed. No real money was used.");
   };
 
   return (
@@ -207,9 +251,12 @@ function SportsLobby({ loggedIn, onLogin }) {
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.15em] text-[#f4bd38]"><Trophy size={15} /> Sportsbook</div>
           <h1 className="mt-2 text-2xl font-black sm:text-3xl">Find your next match</h1>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-white/45">Browse sample fixtures and explore a demo bet slip. Live fixtures, verified odds, and real wagers are not connected yet.</p>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-white/45">Browse mock fixtures, build a multi-selection slip, and track practice tickets. No live odds or cash wagers are connected.</p>
         </div>
-        <span className="w-fit rounded-full border border-amber-200/20 bg-amber-200/[0.07] px-3 py-1.5 text-[11px] font-bold text-amber-100">DEMO MARKETS</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-amber-200/20 bg-amber-200/[0.07] px-3 py-1.5 text-[11px] font-bold text-amber-100">MOCK MARKETS</span>
+          <span className="rounded-full border border-emerald-200/15 bg-emerald-200/[0.06] px-3 py-1.5 text-[11px] font-bold text-emerald-100">Practice: {credits.toFixed(2)} credits</span>
+        </div>
       </div>
 
       <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
@@ -232,13 +279,13 @@ function SportsLobby({ loggedIn, onLogin }) {
                 <div className="grid grid-cols-3 gap-2 sm:min-w-[280px]">
                   {["1", "Draw", "2"].map((pick, index) => {
                     const odds = event.odds[index];
-                    const selected = selection?.eventId === event.id && selection?.pick === pick;
+                    const selected = selections.some((item) => item.eventId === event.id && item.pick === pick);
                     return (
                       <button
                         key={pick}
                         type="button"
                         disabled={odds === "—"}
-                        onClick={() => { setSelection({ eventId: event.id, sport: event.sport, teams: `${event.home} vs ${event.away}`, pick, odds }); setNotice(""); }}
+                        onClick={() => toggleSelection({ eventId: event.id, sport: event.sport, league: event.league, teams: `${event.home} vs ${event.away}`, pick, odds })}
                         className={`rounded-xl border px-2 py-2.5 text-center transition ${selected ? "border-[#f4bd38]/60 bg-[#f4bd38]/15 text-[#f4bd38]" : "border-white/[0.06] bg-[#24273d] text-white/60 hover:border-white/20"} disabled:cursor-not-allowed disabled:opacity-30`}
                       >
                         <span className="block text-[10px]">{pick}</span><span className="mt-1 block text-sm font-black">{odds}</span>
@@ -250,25 +297,57 @@ function SportsLobby({ loggedIn, onLogin }) {
             </article>
           ))}
           {!events.length ? <div className="rounded-2xl border border-white/[0.06] bg-[#191c30] p-8 text-center text-sm text-white/45">No sample events for this sport yet.</div> : null}
+          <section className="rounded-2xl border border-white/[0.07] bg-[#191c30] p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-black">My practice bets</h2>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-white/35">Mock settlement</span>
+            </div>
+            {demoBets.length ? (
+              <div className="mt-3 space-y-2">
+                {demoBets.map((ticket) => (
+                  <article key={ticket.id} className="rounded-xl border border-white/[0.06] bg-[#24273d] p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-black text-white/80">Ticket #{ticket.id.slice(-6)}</p>
+                      <span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${ticket.status === "open" ? "bg-amber-200/10 text-amber-100" : ticket.status === "won" ? "bg-emerald-300/10 text-emerald-200" : "bg-white/[0.07] text-white/45"}`}>{ticket.status}</span>
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      {ticket.selections.map((item) => <p key={`${ticket.id}-${item.eventId}`} className="text-[11px] text-white/55">{item.teams} · {item.pick} @ {item.odds}</p>)}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-2 text-[10px] text-white/40">
+                      <span>Stake {Number(ticket.stake).toFixed(2)} · Return {Number(ticket.potentialReturn).toFixed(2)}</span>
+                      {ticket.status === "open" ? <button type="button" onClick={() => onSettleBet(ticket.id)} className="rounded-lg bg-[#f4bd38] px-2.5 py-1.5 font-black text-[#17191f]">Settle mock result</button> : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : <p className="mt-3 rounded-xl border border-dashed border-white/10 p-4 text-xs text-white/40">Your practice tickets will appear here after you place a demo bet.</p>}
+          </section>
         </div>
 
         <aside className="h-fit rounded-2xl border border-white/[0.07] bg-[#191c30] p-5 lg:sticky lg:top-24">
-          <h2 className="flex items-center gap-2 font-black"><WalletCards size={18} className="text-[#f4bd38]" /> Demo bet slip</h2>
-          {selection ? (
-            <div className="mt-4 rounded-xl border border-white/[0.06] bg-[#24273d] p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div><p className="text-xs font-bold text-[#f4bd38]">{selection.pick} · {selection.odds}</p><p className="mt-1 text-xs text-white/60">{selection.teams}</p></div>
-                <button type="button" onClick={() => { setSelection(null); setNotice(""); }} aria-label="Remove selection" className="text-white/35 hover:text-white"><X size={16} /></button>
-              </div>
-              <label className="mt-4 block text-xs font-bold text-white/50">Demo stake (ETB)
-                <input type="number" min="10" step="1" value={stake} onChange={(event) => setStake(event.target.value)} placeholder="Enter stake" className="mt-2 h-11 w-full rounded-lg border border-white/[0.07] bg-[#191c30] px-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#f4bd38]/40" />
+          <h2 className="flex items-center gap-2 font-black"><WalletCards size={18} className="text-[#f4bd38]" /> Bet slip <span className="ml-auto rounded-full bg-white/[0.06] px-2 py-1 text-[10px] text-white/50">{selections.length} selection{selections.length === 1 ? "" : "s"}</span></h2>
+          {selections.length ? (
+            <div className="mt-4 space-y-2">
+              {selections.map((selection) => (
+                <div key={selection.eventId} className="rounded-xl border border-white/[0.06] bg-[#24273d] p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div><p className="text-[10px] text-white/35">{selection.league}</p><p className="mt-1 text-xs font-bold text-white/75">{selection.teams}</p><p className="mt-1 text-xs font-black text-[#f4bd38]">{selection.pick} · {selection.odds}</p></div>
+                    <button type="button" onClick={() => setSelections((current) => current.filter((item) => item.eventId !== selection.eventId))} aria-label="Remove selection" className="text-white/35 hover:text-white"><X size={16} /></button>
+                  </div>
+                </div>
+              ))}
+              <label className="block pt-1 text-xs font-bold text-white/50">Stake · demo credits
+                <input type="number" min="10" step="1" max={credits} value={stake} onChange={(event) => setStake(event.target.value)} placeholder="Enter stake" className="mt-2 h-11 w-full rounded-lg border border-white/[0.07] bg-[#191c30] px-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#f4bd38]/40" />
               </label>
-              <div className="mt-3 flex justify-between text-xs text-white/45"><span>Estimated return (demo)</span><strong className="text-white">{potentialReturn > 0 ? `${potentialReturn.toFixed(2)} ETB` : "—"}</strong></div>
+              <div className="space-y-2 rounded-xl bg-[#24273d] p-3 text-xs">
+                <div className="flex justify-between text-white/45"><span>Combined odds</span><strong className="text-white">{combinedOdds.toFixed(2)}</strong></div>
+                <div className="flex justify-between text-white/45"><span>Potential return · demo</span><strong className="text-[#f4bd38]">{potentialReturn > 0 ? potentialReturn.toFixed(2) : "—"}</strong></div>
+              </div>
             </div>
-          ) : <p className="mt-4 rounded-xl border border-dashed border-white/10 p-4 text-xs leading-5 text-white/40">Choose an odds button to add a sample selection to your slip.</p>}
+          ) : <p className="mt-4 rounded-xl border border-dashed border-white/10 p-4 text-xs leading-5 text-white/40">Select odds from one or more events to build a practice accumulator.</p>}
           {notice ? <p role="status" className="mt-3 rounded-lg bg-amber-200/[0.07] p-3 text-xs leading-5 text-amber-100/80">{notice}</p> : null}
-          <button type="button" onClick={previewBet} disabled={!selection} className="mt-4 h-11 w-full rounded-xl bg-[#f4bd38] text-sm font-black text-[#17191f] disabled:cursor-not-allowed disabled:opacity-40">{loggedIn ? "Preview demo bet" : "Log in to preview"}</button>
-          <p className="mt-3 text-[10px] leading-4 text-white/30">Demo markets only. No wager is submitted, and your wallet balance is never affected.</p>
+          <button type="button" onClick={placeBet} disabled={!selections.length} className="mt-4 h-11 w-full rounded-xl bg-[#f4bd38] text-sm font-black text-[#17191f] disabled:cursor-not-allowed disabled:opacity-40">{loggedIn ? "Place practice bet" : "Log in to practice"}</button>
+          <p className="mt-3 text-[10px] leading-4 text-white/30">Mock fixtures and odds only. Practice credits have no cash value and never touch your wallet.</p>
         </aside>
       </div>
     </section>
@@ -295,6 +374,17 @@ export default function UltraBet() {
   const [provider, setProvider] = useState("All Providers");
   const [providersOpen, setProvidersOpen] = useState(false);
   const [gamesCollapsed, setGamesCollapsed] = useState(false);
+  const [demoCredits, setDemoCredits] = useState(readDemoCredits);
+  const [demoBets, setDemoBets] = useState(readDemoBets);
+  const settlingBets = useRef(new Set());
+
+  useEffect(() => {
+    localStorage.setItem("ultraBetDemoCredits", String(demoCredits));
+  }, [demoCredits]);
+
+  useEffect(() => {
+    localStorage.setItem("ultraBetDemoBets", JSON.stringify(demoBets.slice(0, 20)));
+  }, [demoBets]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("ultraBetUser");
@@ -358,6 +448,34 @@ export default function UltraBet() {
     window.open("https://t.me/+251921296982", "_blank", "noopener,noreferrer");
   };
 
+  const placePracticeBet = (ticket) => {
+    const amount = Number(ticket.stake);
+    if (!Number.isFinite(amount) || amount < 10 || amount > demoCredits) return false;
+    const newTicket = {
+      ...ticket,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      status: "open",
+      createdAt: new Date().toISOString(),
+    };
+    setDemoCredits((current) => Number((current - amount).toFixed(2)));
+    setDemoBets((current) => [newTicket, ...current].slice(0, 20));
+    return true;
+  };
+
+  const settlePracticeBet = (ticketId) => {
+    if (settlingBets.current.has(ticketId)) return;
+    const ticket = demoBets.find((item) => item.id === ticketId);
+    if (!ticket || ticket.status !== "open") return;
+    settlingBets.current.add(ticketId);
+    const won = Math.random() < 0.45;
+    setDemoBets((current) => current.map((item) => item.id === ticketId
+      ? { ...item, status: won ? "won" : "lost", settledAt: new Date().toISOString() }
+      : item));
+    if (won) {
+      setDemoCredits((current) => Number((current + Number(ticket.potentialReturn)).toFixed(2)));
+    }
+  };
+
   const filteredGames = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return gameCards.filter((game) => {
@@ -405,7 +523,14 @@ export default function UltraBet() {
       </header>
 
       {bottomTab === "sports" ? (
-        <SportsLobby loggedIn={loggedIn} onLogin={() => setAuthMode("login")} />
+        <SportsLobby
+          loggedIn={loggedIn}
+          onLogin={() => setAuthMode("login")}
+          credits={demoCredits}
+          demoBets={demoBets}
+          onPlaceBet={placePracticeBet}
+          onSettleBet={settlePracticeBet}
+        />
       ) : bottomTab === "promos" ? (
         <section className="mx-auto min-h-[70vh] max-w-5xl px-4 py-10 pb-28 sm:px-6">
           <div className="rounded-3xl border border-white/[0.07] bg-gradient-to-br from-[#27223e] to-[#191c30] p-6 sm:p-10">
@@ -495,7 +620,7 @@ export default function UltraBet() {
       )}
 
       {selectedGame ? (
-        <DemoGame game={selectedGame} onClose={() => setSelectedGame(null)} />
+        <DemoGame game={selectedGame} onClose={() => setSelectedGame(null)} credits={demoCredits} setCredits={setDemoCredits} />
       ) : null}
 
       {authMode ? (
